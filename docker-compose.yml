@@ -16,40 +16,24 @@ services:
   app_green:
     image: dktlfem/ci-cd-test:71 # 🌟 CI 파이프라인이 이 태그를 최신 빌드 번호로 교체할 것입니다.
     container_name: app_green
-    ports:
-      - "8081" 
+    expose:
+      - 8081 
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_JPA_DATABASE: mysql
-      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin1234
       SERVER_PORT: 8081
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
     restart: always
-    depends_on:
-       - nginx_proxy
 
   # 3. Blue/Green 배포를 위한 Blue 서버 (대기)
   app_blue:
     image: dktlfem/ci-cd-test:71
     container_name: app_blue
-    ports:
-      - "8082"
+    expose:
+      - 8082
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_JPA_DATABASE: mysql
-      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin1234
       SERVER_PORT: 8082
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
     restart: always
-    depends_on:
-       - nginx_proxy
