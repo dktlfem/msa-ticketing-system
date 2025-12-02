@@ -51,7 +51,7 @@ pipeline {
                     apt-get update
                     apt-get install -y docker.io
                     # 💡 [필수 추가] docker.io 패키지 설치 후 'docker' 명령 사용 가능하도록 심볼릭 링크 생성 (데비안 계열 OS)
-                    sudo ln -s /usr/bin/docker.io /usr/local/bin/docker || true
+                    ln -s /usr/bin/docker.io /usr/local/bin/docker || true
                 '''
             }
         }
