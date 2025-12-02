@@ -19,6 +19,17 @@ pipeline {
                 echo 'Source code checked out successfully.'
             }
         }
+
+        stage('Install Docker Client') {
+            steps {
+                sh '''
+                    apt-get update
+                    apt-get install -y docker.io
+                    # 💡 [필수 추가] docker.io 패키지 설치 후 'docker' 명령 사용 가능하도록 심볼릭 링크 생성 (데비안 계열 OS)
+                    ln -s /usr/bin/docker.io /usr/local/bin/docker || true
+                '''
+            }
+        }
         
         stage('Docker Build and Push') {
             steps {
@@ -42,17 +53,6 @@ pipeline {
                         sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     }
                 }
-            }
-        }
-
-        stage('Install Docker Client') {
-            steps {
-                sh '''
-                    apt-get update
-                    apt-get install -y docker.io
-                    # 💡 [필수 추가] docker.io 패키지 설치 후 'docker' 명령 사용 가능하도록 심볼릭 링크 생성 (데비안 계열 OS)
-                    ln -s /usr/bin/docker.io /usr/local/bin/docker || true
-                '''
             }
         }
         
