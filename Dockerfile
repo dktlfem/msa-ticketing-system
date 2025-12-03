@@ -13,6 +13,9 @@ COPY build.gradle settings.gradle .
 # 'clean build' 대신 'dependencies' 작업을 사용하여 캐싱 효율을 높일 수 있다.
 RUN ./gradlew dependencies
 
+# 💡 [필수 추가] application-prod.properties 파일을 리소스 경로에 명시적으로 복사
+COPY src/main/resources/application-prod.properties src/main/resources/
+
 # 소스 코드 복사 및 최종 빌드
 COPY src src
 RUN ./gradlew clean build -x test
