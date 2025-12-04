@@ -5,7 +5,7 @@ services:
     image: nginx:latest
     container_name: nginx_proxy
     ports:
-      - "80:80" # 외부 트래픽을 Port 80으로 받음
+      - "880:8080" # 외부 트래픽을 Port 8080으로 받음
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf # 🌟 Nginx 설정 파일 마운트
     depends_on:
