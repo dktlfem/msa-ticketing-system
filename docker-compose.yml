@@ -21,7 +21,6 @@ services:
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8081
     restart: always
 
@@ -34,6 +33,5 @@ services:
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8082
     restart: always
