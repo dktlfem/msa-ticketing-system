@@ -49,7 +49,7 @@ pipeline {
                         sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
                 
                         // 4. Docker 이미지 빌드 및 푸시
-                        sh "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                        sh "docker build --no-cache -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
                         sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     }
                 }
