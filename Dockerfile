@@ -14,7 +14,7 @@ COPY build.gradle settings.gradle .
 RUN ./gradlew dependencies
 
 # 💡 [필수 추가] application-prod.properties 파일을 리소스 경로에 명시적으로 복사
-# COPY src/main/resources/application-prod.properties src/main/resources/
+COPY src/main/resources/application.properties src/main/resources/
 
 # 소스 코드 복사 및 최종 빌드
 COPY src src
