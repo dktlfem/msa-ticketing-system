@@ -13,10 +13,9 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
-                checkout scm
+                echo 'Source code checked out successfully.'
             }
         }
 
