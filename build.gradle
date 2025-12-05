@@ -18,6 +18,7 @@ dependencies {
 
     implementation 'org.hibernate:hibernate-community-dialects:6.5.2.Final'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'jakarta.annotation:jakarta.annotation-api'
@@ -27,13 +28,6 @@ dependencies {
     annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:3.3.2')
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('bootJar') {
-    // 💡 Gradle 7.x 이상에서 API 변경으로 인한 충돌을 피하기 위해 설정
-    // 이 설정은 파일 권한 복사 방식 변경을 통해 API 호환성 문제를 우회합니다.
-    dirMode = 0755 // 또는 493 (기본 파일 권한 설정, API 호출 우회)
-    fileMode = 0644
 }
 
 tasks.named('test') {
