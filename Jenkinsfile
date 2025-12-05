@@ -10,16 +10,19 @@ pipeline {
         EC2_HOST = '15.134.88.109'
     }
 
-    stages {
-        stage('Initialize Git Safety') { // 🌟 새로운 스테이지 추가
-            steps {
-                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline'
-                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline@tmp' // @tmp 워크스페이스도 추가
-            }
-        }
+    options {
+        // 빌드가 시작될 때마다 워크스페이스를 완전히 정리하도록 설정 (필수)
+        skipDefaultCheckout() // 기본 checkout 로직 비활성화
+    }
 
-        stage('Checkout Code') {
+    stages {
+        stage('Initialize') {
             steps {
+                // 🌟🌟 Checkout보다 먼저 Git Global 설정을 등록하여 버그를 우회 🌟🌟
+                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline'
+                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline@tmp'
+                
+                // 이후 Git SCM Checkout 실행
                 checkout scm
             }
         }
