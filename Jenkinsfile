@@ -8,6 +8,10 @@ pipeline {
         EC2_USER = 'ubuntu'
         // 2. AWS EC2 퍼블릭 IP 또는 DNS 주소로 변경하세요.
         EC2_HOST = '15.134.88.109'
+
+        SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
+        SPRING_DATASOURCE_USERNAME: admin
+        SPRING_DATASOURCE_PASSWORD: admin1234
     }
 
     options {
