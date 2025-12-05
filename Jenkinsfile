@@ -13,12 +13,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code') {
-            steps {
-                // 이 단계에서 Jenkins는 GitLab에서 코드를 가져옵니다.
-                echo 'Source code checked out successfully.'
-            }
-        }
 
         stage('Explicit Git Clone') { // Checkout SCM 단계를 대체
             steps {
@@ -30,7 +24,8 @@ pipeline {
 
                         def repoUrl = "http://${GIT_USERNAME}:${GIT_PASSWORD}@192.168.124.100:8081/koes_c/ci-cd-test.git"
 
-                        sh 'rm -rf *'
+                        sh 'find . -mindepth 1 -delete'
+                        
                         sh "git clone ${repoUrl} ."
                     }
                 }
