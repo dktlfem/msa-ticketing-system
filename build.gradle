@@ -10,6 +10,8 @@ description = 'Demo project for Spring Boot'
 
 repositories {
 	mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://maven.google.com/' }
 }
 
 dependencies {
