@@ -29,6 +29,12 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.named('bootJar') {
+    // Gradle 7+ 환경에서 API 충돌을 피하기 위해 파일 권한 속성을 명시적으로 비활성화합니다.
+    // 이는 파일 권한 설정 API를 호출하는 로직 자체를 우회합니다.
+    archiveFile.get().setExecutable(true) // 실행 가능하도록 설정 (API 충돌 방지)
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }
