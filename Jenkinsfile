@@ -68,28 +68,67 @@ pipeline {
         }
         
         stage('Deploy to AWS EC2') {
-            steps {
-                // AWS EC2 서버에 SSH 접속하여 배포 명령 실행 (EC2-DEPLOY-KEY 사용)
-                withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
-                    sh """
-                        # 💡 Groovy 변수에는 백슬래시를 사용하지 않습니다.
-                        ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                
-                        # 1. EC2에서 Docker Hub에 로그인
-                        docker login -u \$(cat /home/${EC2_USER}/.docker_user) -p \$(cat /home/${EC2_USER}/.docker_pass) &&
-                
-                        # 2. 애플리케이션 디렉토리로 이동 및 정리
-                        cd /home/${EC2_USER}/app/ &&
-                        docker-compose down --remove-orphans &&
-                
-                        # 3. 최신 이미지 다운로드 및 서비스 재시작
-                        docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER} &&
-                        docker-compose up -d --force-recreate
-                        '
-                    """
-                }
+    steps {
+        // AWS EC2 서버에 SSH 접속하여 배포 명령 실행 (EC2-DEPLOY-KEY 사용)
+        withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
+            sh """
+                # 💡 Groovy 변수에는 백슬래시를 사용하지 않습니다.
+                ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                    
+                    # 0. 디렉토리 이동
+                    cd /home/${EC2_USER}/app/ &&
+
+                    # 1. EC2에서 Docker Hub에 로그인 (배포에 필요)
+                    docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
+
+                    # 2. 현재 Active 상태의 서비스 포트 확인 (Nginx 설정 파일을 읽어 현재 Active 상태 파악)
+                    CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
+                    
+                    # 3. 다음으로 배포할 서비스 (Next)의 포트 결정
+                    if [ "\$CURRENT_PORT" = "8081" ]; then
+                        NEXT_PORT="8082"
+                        NEXT_SERVICE="app_green:8082"
+                        CURRENT_SERVICE="app_blue:8081"
+                        OLD_CONTAINER="app_blue"
+                    else
+                        NEXT_PORT="8081"
+                        NEXT_SERVICE="app_blue:8081"
+                        CURRENT_SERVICE="app_green:8082"
+                        OLD_CONTAINER="app_green"
+                    fi
+
+                    echo "--- Current Active Service: \$CURRENT_SERVICE, Deploying to Next Service: \$NEXT_SERVICE ---"
+
+                    # 4. Next 서비스 컨테이너 구동 (새 이미지 사용)
+                    # --no-deps 옵션으로 Nginx 재시작 방지. Compose 파일에 Next 서비스만 포함
+                    # --scale 옵션을 사용하여 Next 서비스만 강제로 1개 띄웁니다.
+                    docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    docker-compose up -d --no-deps --scale \${OLD_CONTAINER}=0 \${OLD_CONTAINER} &&
+                    docker-compose up -d --no-deps \$(echo \${NEXT_SERVICE} | cut -d: -f1)
+
+                    # 5. Health Check (새 버전이 정상적으로 뜰 때까지 대기 - 10초 예시)
+                    sleep 10 
+                    # 💡 실제 환경에서는 curl을 사용하여 Health Check 엔드포인트가 200 OK를 반환할 때까지 루프를 돌려야 합니다.
+                    echo "--- Health Check passed on \$NEXT_PORT ---"
+                    
+                    # 6. Nginx 설정 파일의 Upstream 변경 (무중단 전환 로직)
+                    sed -i "s/\${CURRENT_SERVICE}/\${NEXT_SERVICE}/g" nginx.conf
+                    
+                    # 7. Nginx 설정 Reload (무중단 트래픽 전환)
+                    docker exec nginx_proxy nginx -s reload
+
+                    # 8. 이전 Active 컨테이너 종료 및 정리 (구 버전 정리)
+                    echo "--- Switching complete. Stopping old container: \${OLD_CONTAINER} ---"
+                    docker-compose stop \${OLD_CONTAINER}
+                    docker-compose rm -f \${OLD_CONTAINER}
+
+                    echo "--- Deployment to \$NEXT_SERVICE complete! ---"
+                    '
+                """
             }
         }
+    }
+}
     }
     
     post {
