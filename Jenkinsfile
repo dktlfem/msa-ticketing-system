@@ -14,21 +14,9 @@ pipeline {
 
     stages {
 
-        stage('Explicit Git Clone') { // Checkout SCM 단계를 대체
+        stage('Checkout Code') {
             steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'GITLAB-PULL-CRED', 
-                        passwordVariable: 'GIT_PASSWORD', 
-                        usernameVariable: 'GIT_USERNAME')]) {
-
-                        def repoUrl = "http://${GIT_USERNAME}:${GIT_PASSWORD}@192.168.124.100:8081/koes_c/ci-cd-test.git"
-
-                        sh 'find . -mindepth 1 -delete'
-                        
-                        sh "git clone ${repoUrl} ."
-                    }
-                }
+                checkout scm
             }
         }
 
