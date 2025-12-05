@@ -123,11 +123,12 @@ pipeline {
                             docker-compose rm -f \${OLD_CONTAINER}
 
                             echo "--- Deployment to \$NEXT_SERVICE complete! ---"
-                            
-                    """  
+                            '
+                        """  
+                    }
                 }
-            }
-        }  
+            } 
+        } 
     post {
         always {
             echo 'Pipeline finished.'
