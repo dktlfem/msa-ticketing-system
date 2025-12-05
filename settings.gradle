@@ -1,8 +1,8 @@
-rootProject.name = 'ci-cd-test'
-
 pluginManagement {
     repositories {
         gradlePluginPortal() // 기본 플러그인 저장소
         mavenCentral()       // Maven Central 추가 (Spring Boot 플러그인 검색용)
     }
 }
+
+rootProject.name = 'ci-cd-test'
