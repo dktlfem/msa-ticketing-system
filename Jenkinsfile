@@ -11,6 +11,13 @@ pipeline {
     }
 
     stages {
+        stage('Initialize Git Safety') { // 🌟 새로운 스테이지 추가
+            steps {
+                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline'
+                sh 'git config --global --add safe.directory /var/jenkins_home/workspace/ci-cd-test-pipeline@tmp' // @tmp 워크스페이스도 추가
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 checkout scm
