@@ -34,6 +34,7 @@ pipeline {
                         def repoUrl = "http://${GIT_USERNAME}:${GIT_PASSWORD}@192.168.124.100:8081/koes_c/ci-cd-test.git"
                         
                         // 명시적인 git clone 명령 실행
+                        sh 'rm -rf *'
                         sh "git clone ${repoUrl}"
                     }
                 }
