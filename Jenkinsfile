@@ -5,9 +5,7 @@ pipeline {
     environment {
         // 1. Docker Hub ID와 이미지 이름으로 변경하세요.
         DOCKER_IMAGE = 'dktlfem/ci-cd-test' 
-        
         EC2_USER = 'ubuntu'
-        
         // 2. AWS EC2 퍼블릭 IP 또는 DNS 주소로 변경하세요.
         EC2_HOST = '15.134.88.109'
     }
