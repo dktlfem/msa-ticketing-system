@@ -20,22 +20,18 @@ pipeline {
             }
         }
 
-        stage('Checkout SCM') {
+        stage('Explicit Git Clone') { // Checkout SCM 단계를 대체
             steps {
                 script {
-                    // Jenkins가 제공하는 withCredentials 헬퍼를 사용하여
-                    // GITLAB-PULL-CRED 자격 증명(ID/PW=액세스 토큰)을 환경 변수로 주입합니다.
                     withCredentials([usernamePassword(
                         credentialsId: 'GITLAB-PULL-CRED', 
                         passwordVariable: 'GIT_PASSWORD', 
                         usernameVariable: 'GIT_USERNAME')]) {
-                        
-                        // ID와 토큰을 사용하여 Git URL을 구성합니다.
+
                         def repoUrl = "http://${GIT_USERNAME}:${GIT_PASSWORD}@192.168.124.100:8081/koes_c/ci-cd-test.git"
-                        
-                        // 명시적인 git clone 명령 실행
+
                         sh 'rm -rf *'
-                        sh "git clone ${repoUrl}"
+                        sh "git clone ${repoUrl} ."
                     }
                 }
             }
