@@ -27,8 +27,8 @@ pipeline {
                     // GITLAB-PULL-CRED 자격 증명(ID/PW=액세스 토큰)을 환경 변수로 주입합니다.
                     withCredentials([usernamePassword(
                         credentialsId: 'GITLAB-PULL-CRED', 
-                        passwordVariable: 'glpat-uZSoBTn9DVi51rYgdCdwFG86MQp1OjUH.01.0w1c2qagf', 
-                        usernameVariable: 'koes_c')]) {
+                        passwordVariable: 'GIT_PASSWORD', 
+                        usernameVariable: 'GIT_USERNAME')]) {
                         
                         // ID와 토큰을 사용하여 Git URL을 구성합니다.
                         def repoUrl = "http://${GIT_USERNAME}:${GIT_PASSWORD}@192.168.124.100:8081/koes_c/ci-cd-test.git"
