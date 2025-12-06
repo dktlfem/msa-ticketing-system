@@ -72,6 +72,10 @@ pipeline {
                 // AWS EC2 서버에 SSH 접속하여 배포 명령 실행 (EC2-DEPLOY-KEY 사용)
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     sh """
+                        # 💡 Groovy 변수를 Shell 환경 변수로 Export
+                        # EC2에서 docker-compose가 이 변수를 읽을 수 있게 합니다.
+                        export BUILD_NUMBER='${BUILD_NUMBER}'
+
                         # 💡 Groovy 변수에는 백슬래시를 사용하지 않습니다.
                         ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
                     
