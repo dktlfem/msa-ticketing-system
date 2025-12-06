@@ -106,8 +106,11 @@ pipeline {
                             # --no-deps 옵션으로 Nginx 재시작 방지. Compose 파일에 Next 서비스만 포함
                             # --scale 옵션을 사용하여 Next 서비스만 강제로 1개 띄웁니다.
                             docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                            docker-compose up -d --no-deps --scale ${OLD_CONTAINER}=0 ${OLD_CONTAINER} &&
-                            docker-compose up -d --no-deps nginx_proxy $(echo ${NEXT_SERVICE} | cut -d: -f1)
+                            docker-compose up -d --no-deps nginx_proxy \$(echo \${NEXT_SERVICE} | cut -d: -f1)
+
+                            # 🌟 4-A. OLD 컨테이너 정리 로직 (Shell 명령이 안전하게 실행되도록 분리)
+                            docker-compose stop \${OLD_CONTAINER}
+                            docker-compose rm -f \${OLD_CONTAINER}
 
                             # 5. Health Check (새 버전이 정상적으로 뜰 때까지 대기 - 10초 예시)
                             sleep 10 
