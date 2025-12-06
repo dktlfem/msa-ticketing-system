@@ -81,6 +81,10 @@ pipeline {
                             # 0. 디렉토리 이동
                             cd /home/${EC2_USER}/app/ &&
 
+                            # 🌟🌟🌟 FIX: Nginx 컨테이너 이름 충돌 방지를 위해 강제 삭제 🌟🌟🌟
+                            # 이미 실행 중이거나 정지된 상태의 nginx_proxy 컨테이너를 강제 제거합니다.
+                            docker rm -f nginx_proxy || true
+
                             # 1. EC2에서 Docker Hub에 로그인 (배포에 필요)
                             docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
 
