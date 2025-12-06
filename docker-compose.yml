@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   # 1. Nginx 리버스 프록시 서버
-  nginx:
+  nginx_proxy:
     image: nginx:latest
     container_name: nginx_proxy
     ports:
