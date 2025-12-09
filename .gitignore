@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### application-local.properties 추적 금지
+src/main/resources/application-local.properties
