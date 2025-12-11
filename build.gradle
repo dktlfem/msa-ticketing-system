@@ -9,7 +9,7 @@ version = '0.0.1-SNAPSHOT'
 description = 'Demo project for Spring Boot'
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
@@ -22,11 +22,35 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'jakarta.annotation:jakarta.annotation-api'
 
+    // 시큐리티 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
+
+    // jdbc 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+    // jjwt 의존성 추가
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // valid 검증 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:3.4.0')
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // 시큐리티 의존성 추가
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+
+
 }
 
 bootJar {
@@ -34,5 +58,5 @@ bootJar {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }

@@ -38,3 +38,6 @@ out/
 
 ### application-local.properties 추적 금지
 src/main/resources/application-local.properties
+
+# Node.js 모듈 디렉토리 (프론트엔드 모듈)
+/frontend/node_modules
