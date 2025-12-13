@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   # 1. Nginx 리버스 프록시 서버
-  nginx:
+  nginx_proxy:
     image: nginx:latest
     container_name: nginx_proxy
     ports:
@@ -9,47 +9,39 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf # 🌟 Nginx 설정 파일 마운트
     depends_on:
-      - app_green
+      - app_blue
     restart: always
 
   # 2. Blue/Green 배포를 위한 Green 서버 (초기 가동)
-  app_green:
-    image: dktlfem/ci-cd-test:71 # 🌟 CI 파이프라인이 이 태그를 최신 빌드 번호로 교체할 것입니다.
-    container_name: app_green
-    ports:
-      - "8081" 
+  app_blue:
+    image: dktlfem/ci-cd-test:${BLUE_VERSION:-v1.0.0} # 🌟 CI 파이프라인이 이 태그를 최신 빌드 번호로 교체할 것입니다.
+    container_name: app_blue
+    expose:
+      - "8081"
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_JPA_DATABASE: mysql
-      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin1234
-      SERVER_PORT: 8081
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
     restart: always
-    depends_on:
-       - nginx_proxy
 
   # 3. Blue/Green 배포를 위한 Blue 서버 (대기)
-  app_blue:
-    image: dktlfem/ci-cd-test:71
-    container_name: app_blue
+  app_green:
+    image: dktlfem/ci-cd-test:${GREEN_VERSION:-v1.0.0}
+    container_name: app_green
     ports:
       - "8082"
     volumes:
       - ./etc/localtime:/etc/localtime:ro
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_JPA_DATABASE: mysql
-      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin1234
-      SERVER_PORT: 8082
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
     restart: always
-    depends_on:
-       - nginx_proxy
