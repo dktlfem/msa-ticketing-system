@@ -55,6 +55,7 @@ dependencies {
 
 bootJar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'app.jar'
 }
 
 tasks.named('test') {
