@@ -16,7 +16,7 @@ RUN ./gradlew clean build -x test
 
 # 🌟 빌드 결과 JAR 파일명을 확인합니다. (예: build.gradle의 rootProject.name + version)
 # 🌟 아래 변수는 예시입니다. 실제 JAR 파일명을 확인하여 수정해야 합니다.
-ARG JAR_FILE_NAME=your-app-name-0.0.1-SNAPSHOT.jar 
+RUN mv build/libs/*SNAPSHOT.jar build/libs/app.jar || true
 
 
 # 2단계: 실행 환경 (Run Stage)
