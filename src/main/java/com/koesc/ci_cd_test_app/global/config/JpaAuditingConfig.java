@@ -1,4 +1,4 @@
-package com.koesc.ci_cd_test_app.config;
+package com.koesc.ci_cd_test_app.global.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
