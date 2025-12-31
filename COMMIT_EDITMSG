@@ -1,0 +1,40 @@
+Merge remote-tracking branch 'origin/main' into feature/my-first-api
+
+# Conflicts:
+#	build.gradle
+#	src/main/resources/application-local.properties
+#
+# It looks like you may be committing a merge.
+# If this is not correct, please run
+#	git update-ref -d MERGE_HEAD
+# and try again.
+
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# 현재 브랜치 feature/my-first-api
+# 모든 충돌을 바로잡았지만 아직 병합하는 중입니다.
+#
+# 커밋할 변경 사항:
+#	수정함:        Dockerfile
+#	수정함:        Jenkinsfile
+#	수정함:        README.md
+#	수정함:        docker-compose.yml
+#	새 파일:       frontend/.gitignore
+#	새 파일:       frontend/README.md
+#	새 파일:       frontend/eslint.config.js
+#	새 파일:       frontend/index.html
+#	새 파일:       frontend/package-lock.json
+#	새 파일:       frontend/package.json
+#	새 파일:       frontend/public/vite.svg
+#	새 파일:       frontend/src/App.css
+#	새 파일:       frontend/src/App.jsx
+#	새 파일:       frontend/src/assets/react.svg
+#	새 파일:       frontend/src/index.css
+#	새 파일:       frontend/src/main.jsx
+#	새 파일:       frontend/vite.config.js
+#	수정함:        nginx.conf
+#	수정함:        settings.gradle
+#	삭제함:        src/main/resources/application-local.properties
+#
