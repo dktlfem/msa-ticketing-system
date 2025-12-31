@@ -25,7 +25,8 @@ WORKDIR /app
 
 # 빌드 스테이지에서 생성된 실행 가능한 JAR 파일을 정확한 이름으로 복사
 # 🌟 와일드카드 (*) 대신 정확한 JAR 파일 이름을 사용합니다.
-COPY --from=builder /app/build/libs/${JAR_FILE_NAME} app.jar
+# 기존 작성 내용 : COPY --from=builder /app/build/libs/${JAR_FILE_NAME} app.jar (${JAR_FILE_NAME} 변수명 사용 x)
+COPY --from=builder /app/build/libs/app.jar app.jar
 
 # 애플리케이션 실행에 필요한 포트 노출 (Docker Compose에서 이미 8081/8082로 지정됨)
 EXPOSE 8081 
