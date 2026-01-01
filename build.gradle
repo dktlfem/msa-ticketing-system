@@ -24,10 +24,11 @@ dependencies {
 
     // 시큐리티 의존성 추가
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    // implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client:3.4.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 
     // jdbc 의존성 추가
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
 
     // jjwt 의존성 추가
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
@@ -42,14 +43,10 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // 시큐리티 의존성 추가
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    // testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test:3.4.0'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 
+    // @DataJpaTest가 이 의존성을 찾고 H2 인메모리 DB를 통한 테스트 수행
+    testImplementation 'com.h2database:h2'
 
 }
 
