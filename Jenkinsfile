@@ -69,7 +69,7 @@ pipeline {
         
         stage('Deploy to AWS EC2') {
             steps {
-                withCredentials([file(credentialsId: 'EC2_KEY', variable: 'KEY_FILE')]) {
+                withCredentials([file(credentialsId: 'EC2-DEPLOY-KEY', variable: 'KEY_FILE')]) {
                     sh '''
                         ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 "
                             export BUILD_NUMBER=${BUILD_NUMBER}
