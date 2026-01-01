@@ -69,55 +69,62 @@ pipeline {
         
         stage('Deploy to AWS EC2') {
             steps {
+                // 1. 열쇠 꺼내기 (sshUserPrivateKey 사용)
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
-                    sh '''
-                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 "
+                    // 2. 쉘 스크립트 실행 (따옴표 3개 주의!)
+                    sh """
+                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 '
+                            # ---------------------------------------------------------
+                            # [주의] Jenkins 변수는 그냥 \${...}, 리눅스 변수는 \\\$... 로 씁니다.
+                            # ---------------------------------------------------------
+                    
+                            # Jenkins가 빌드 번호를 주입해줌
                             export BUILD_NUMBER=${BUILD_NUMBER}
                             cd /home/ubuntu/app/ &&
 
-                            # 0. Nginx 컨테이너가 없으면 실행 (최초 배포 시 안전장치)
+                            # 0. Nginx 안전장치 (없으면 켬)
                             docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
 
-                            # 1. Docker Hub 로그인
+                            # 1. Docker Hub 로그인 (리눅스 변수니까 앞에 \\\$ 붙임)
                             docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
 
-                            # 2. 현재 실행 중인 서비스 확인 (app_blue or app_green)
-                            CURRENT_PORT=\$(grep -oE 'app_[a-z]+:([0-9]+);' nginx.conf | grep -oE '[0-9]+')
+                            # 2. 현재 실행 중인 포트 확인 (Blue/Green 판별)
+                            CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
 
-                            # 3. 배포할 포트 결정
-                            if [ \\"\$CURRENT_PORT\\" = \\"8081\\" ]; then
-                                NEXT_PORT=\\"8082\\"
-                                NEXT_SERVICE=\\"app_green:8082\\"
-                                OLD_CONTAINER=\\"app_blue\\"
+                            # 3. 다음 배포할 포트/서비스 결정
+                            if [ "\$CURRENT_PORT" = "8081" ]; then
+                                NEXT_PORT="8082"
+                                NEXT_SERVICE="app_green:8082"
+                                OLD_CONTAINER="app_blue"
                             else
-                                NEXT_PORT=\\"8081\\"
-                                NEXT_SERVICE=\\"app_blue:8081\\"
-                                OLD_CONTAINER=\\"app_green\\"
+                                NEXT_PORT="8081"
+                                NEXT_SERVICE="app_blue:8081"
+                                OLD_CONTAINER="app_green"
                             fi
 
-                            echo \\"--- Current: \$CURRENT_PORT, Deploying to: \$NEXT_SERVICE ---\\"
+                            echo "--- Current: \$CURRENT_PORT, Deploying to: \$NEXT_SERVICE ---"
 
                             # 4. 새 버전(Next) 컨테이너 실행
                             docker pull dktlfem/ci-cd-test:${BUILD_NUMBER}
-                            docker-compose up -d --no-deps nginx_proxy \$(echo \${NEXT_SERVICE} | cut -d: -f1)
+                            docker-compose up -d --no-deps nginx_proxy \$(echo \$NEXT_SERVICE | cut -d: -f1)
 
                             # 5. Health Check (새 서버가 뜰 때까지 대기)
-                            echo \\"--- Waiting for Health Check... ---\\"
+                            echo "--- Waiting for Health Check... ---"
                             sleep 10
 
-                            # 6. Nginx 설정 변경 (핵심: app_... 패턴만 찾아서 변경하여 안전함)
-                            sed -i \\"s/server app_.*;/server \${NEXT_SERVICE};/g\\" nginx.conf
+                            # 6. Nginx 설정 변경 (핵심: 문법 안 깨지게 조심!)
+                            sed -i "s/server app_.*;/server \$NEXT_SERVICE;/g" nginx.conf
 
                             # 7. Nginx Reload (트래픽 전환)
                             docker exec nginx_proxy nginx -s reload
-                            echo \\"--- Traffic Switched to \$NEXT_SERVICE ---\\"
+                            echo "--- Traffic Switched to \$NEXT_SERVICE ---"
 
-                            # 8. 구 버전(Old) 컨테이너 중지 및 삭제 (전환 성공 후에 삭제해야 안전!)
-                            docker-compose stop \${OLD_CONTAINER}
-                            docker-compose rm -f \${OLD_CONTAINER}
-                            echo \\"--- Cleanup Complete: \${OLD_CONTAINER} ---\\"
-                        "
-                    '''
+                            # 8. 구 버전(Old) 컨테이너 정리
+                            docker-compose stop \$OLD_CONTAINER
+                            docker-compose rm -f \$OLD_CONTAINER
+                            echo "--- Cleanup Complete: \$OLD_CONTAINER ---"
+                        '
+                    """
                 }
             }
         }
