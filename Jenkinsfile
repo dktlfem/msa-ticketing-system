@@ -121,14 +121,9 @@ pipeline {
                             # 💡 실제 환경에서는 curl을 사용하여 Health Check 엔드포인트가 200 OK를 반환할 때까지 루프를 돌려야 합니다.
                             echo "--- Health Check passed on \$NEXT_PORT ---"
                     
-                            # 6. Nginx 설정 파일의 Upstream 변경 (무중단 전환 로직)
-                            # sed -i "s/\${CURRENT_SERVICE}/\${NEXT_SERVICE}/g" nginx.conf
-
-                            # 6-A. Next 서버를 Active 상태로 변경 (down 키워드 제거)
-                            sed -i "s/\${NEXT_SERVICE} down;/\${NEXT_SERVICE};/g" nginx.conf
-
-                            # 6-B. Active 서버를 Inactive 상태로 변경 (down 키워드 추가)
-                            sed -i "s/\${CURRENT_SERVICE};/\${CURRENT_SERVICE} down;/g" nginx.conf
+                            # 6. Nginx 설정 파일의 Upstream 갱신 (덮어쓰기 방식)
+                            # 설명: "server ..." 로 시작하는 줄을 찾아서 현재 띄울 서비스로 통째로 교체
+                            sh "sed -i 's/server .*/server ${NEXT_SERVICE};/g' nginx.conf"
                     
                             # 7. Nginx 설정 Reload (무중단 트래픽 전환)
                             docker exec nginx_proxy nginx -s reload
