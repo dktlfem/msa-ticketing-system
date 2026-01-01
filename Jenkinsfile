@@ -123,7 +123,7 @@ pipeline {
                     
                             # 6. Nginx 설정 파일의 Upstream 갱신 (덮어쓰기 방식)
                             # 설명: "server ..." 로 시작하는 줄을 찾아서 현재 띄울 서비스로 통째로 교체
-                            sh "sed -i 's/server .*/server ${NEXT_SERVICE};/g' nginx.conf"
+                            ssh "sed -i 's/server .*/server \${NEXT_SERVICE};/g' nginx.conf"
                     
                             # 7. Nginx 설정 Reload (무중단 트래픽 전환)
                             docker exec nginx_proxy nginx -s reload
