@@ -69,77 +69,59 @@ pipeline {
         
         stage('Deploy to AWS EC2') {
             steps {
-                // AWS EC2 서버에 SSH 접속하여 배포 명령 실행 (EC2-DEPLOY-KEY 사용)
-                withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
-                    sh """
-                        # 💡 Groovy 변수에는 백슬래시를 사용하지 않습니다.
-                        ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                    
-                            # 🌟 FIX: BUILD_NUMBER 변수를 remote Shell 환경에 주입
+                withCredentials([file(credentialsId: 'EC2_KEY', variable: 'KEY_FILE')]) {
+                    sh '''
+                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 "
                             export BUILD_NUMBER=${BUILD_NUMBER}
+                            cd /home/ubuntu/app/ &&
 
-                            # 0. 디렉토리 이동
-                            cd /home/${EC2_USER}/app/ &&
+                            # 0. Nginx 컨테이너가 없으면 실행 (최초 배포 시 안전장치)
+                            docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
 
-                            # 🌟🌟🌟 FIX: Nginx 컨테이너 이름 충돌 방지를 위해 강제 삭제 🌟🌟🌟
-                            # 이미 실행 중이거나 정지된 상태의 nginx_proxy 컨테이너를 강제 제거합니다.
-                            docker rm -f nginx_proxy || true
-
-                            # 1. EC2에서 Docker Hub에 로그인 (배포에 필요)
+                            # 1. Docker Hub 로그인
                             docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
 
-                            # 2. 현재 Active 상태의 서비스 포트 확인 (Nginx 설정 파일을 읽어 현재 Active 상태 파악)
-                            CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
-                    
-                            # 3. 다음으로 배포할 서비스 (Next)의 포트 결정
-                            if [ "\$CURRENT_PORT" = "8081" ]; then
-                                NEXT_PORT="8082"
-                                NEXT_SERVICE="app_green:8082"
-                                CURRENT_SERVICE="app_blue:8081"
-                                OLD_CONTAINER="app_blue"
+                            # 2. 현재 실행 중인 서비스 확인 (app_blue or app_green)
+                            CURRENT_PORT=\$(grep -oE 'app_[a-z]+:([0-9]+);' nginx.conf | grep -oE '[0-9]+')
+
+                            # 3. 배포할 포트 결정
+                            if [ \\"\$CURRENT_PORT\\" = \\"8081\\" ]; then
+                                NEXT_PORT=\\"8082\\"
+                                NEXT_SERVICE=\\"app_green:8082\\"
+                                OLD_CONTAINER=\\"app_blue\\"
                             else
-                                NEXT_PORT="8081"
-                                NEXT_SERVICE="app_blue:8081"
-                                CURRENT_SERVICE="app_green:8082"
-                                OLD_CONTAINER="app_green"
+                                NEXT_PORT=\\"8081\\"
+                                NEXT_SERVICE=\\"app_blue:8081\\"
+                                OLD_CONTAINER=\\"app_green\\"
                             fi
 
-                            echo "--- Current Active Service: \$CURRENT_SERVICE, Deploying to Next Service: \$NEXT_SERVICE ---"
+                            echo \\"--- Current: \$CURRENT_PORT, Deploying to: \$NEXT_SERVICE ---\\"
 
-                            # 4. Next 서비스 컨테이너 구동 (새 이미지 사용)
-                            # --no-deps 옵션으로 Nginx 재시작 방지. Compose 파일에 Next 서비스만 포함
-                            # --scale 옵션을 사용하여 Next 서비스만 강제로 1개 띄웁니다.
-                            docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            # 4. 새 버전(Next) 컨테이너 실행
+                            docker pull dktlfem/ci-cd-test:${BUILD_NUMBER}
                             docker-compose up -d --no-deps nginx_proxy \$(echo \${NEXT_SERVICE} | cut -d: -f1)
 
-                            # 🌟 4-A. OLD 컨테이너 정리 로직 (Shell 명령이 안전하게 실행되도록 분리)
-                            docker-compose stop \${OLD_CONTAINER}
-                            docker-compose rm -f \${OLD_CONTAINER}
+                            # 5. Health Check (새 서버가 뜰 때까지 대기)
+                            echo \\"--- Waiting for Health Check... ---\\"
+                            sleep 10
 
-                            # 5. Health Check (새 버전이 정상적으로 뜰 때까지 대기 - 10초 예시)
-                            sleep 10 
-                            # 💡 실제 환경에서는 curl을 사용하여 Health Check 엔드포인트가 200 OK를 반환할 때까지 루프를 돌려야 합니다.
-                            echo "--- Health Check passed on \$NEXT_PORT ---"
-                    
-                            # 6. Nginx 설정 파일의 Upstream 갱신 (덮어쓰기 방식)
-                            # 설명: "server ..." 로 시작하는 줄을 찾아서 현재 띄울 서비스로 통째로 교체
-                            sed -i "s/server .*/server \${NEXT_SERVICE};/g" nginx.conf
-                    
-                            # 7. Nginx 설정 Reload (무중단 트래픽 전환)
+                            # 6. Nginx 설정 변경 (핵심: app_... 패턴만 찾아서 변경하여 안전함)
+                            sed -i \\"s/server app_.*;/server \${NEXT_SERVICE};/g\\" nginx.conf
+
+                            # 7. Nginx Reload (트래픽 전환)
                             docker exec nginx_proxy nginx -s reload
+                            echo \\"--- Traffic Switched to \$NEXT_SERVICE ---\\"
 
-                            # 8. 이전 Active 컨테이너 종료 및 정리 (구 버전 정리)
-                            echo "--- Switching complete. Stopping old container: \${OLD_CONTAINER} ---"
+                            # 8. 구 버전(Old) 컨테이너 중지 및 삭제 (전환 성공 후에 삭제해야 안전!)
                             docker-compose stop \${OLD_CONTAINER}
                             docker-compose rm -f \${OLD_CONTAINER}
-
-                            echo "--- Deployment to \$NEXT_SERVICE complete! ---"
-                            '
-                        """  
-                    }
+                            echo \\"--- Cleanup Complete: \${OLD_CONTAINER} ---\\"
+                        "
+                    '''
                 }
-            } 
-        } 
+            }
+        }
+         
     post {
         always {
             echo 'Pipeline finished.'
