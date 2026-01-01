@@ -19,7 +19,13 @@
 * 병합 시 옵션은 Squash and Merge를 선택하여, main의 커밋 히스토리를 깔끔하게 유지함.
 
 # 3. 커밋 메시지 컨벤션
-[유형] : <내용> 형식 사용
+Angular 스타일의 Conventional Commits 규칙을 따름.
+
+## 3.1 형식
+<type>(<scope>): <subject>
+(scope는 선택 사항이며, 변경된 도메인이나 모듈명을 명시함)
+
+## 3.2 유형 (Type)
 * feat : 새로운 기능 추가
 * fix : 버그 수정
 * docs : 문서 (MD 파일 포함) 수정
