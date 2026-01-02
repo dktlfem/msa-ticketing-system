@@ -2,7 +2,6 @@ package com.koesc.ci_cd_test_app.implement.mapper;
 
 import com.koesc.ci_cd_test_app.domain.User;
 import com.koesc.ci_cd_test_app.storage.entity.UserEntity;
-import lombok.Builder;
 import org.springframework.stereotype.Component;
 
 /**

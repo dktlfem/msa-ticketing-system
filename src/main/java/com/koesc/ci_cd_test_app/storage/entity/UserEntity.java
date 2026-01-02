@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity // 테이블이랑 1:1 매핑되는 객체
-@Table(name = "members")
+@Table(name = "users")
 @Getter // 조회용 Getter 자동 생성
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA는 기본 생성자가 필수 (외부에서 무분별한 생성 방지)
@@ -15,7 +15,7 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment (1, 2, 3...)
-    @Column(name = "member_id")
+    @Column(name = "user_id")
     private Long id;
 
     @Column(nullable = false, unique = true, length = 100) // not null + unique

@@ -39,7 +39,7 @@ public class UserValidatorTest {
 
         UserEntity userEntity = userRepository.save(savedEntity);
 
-        // 2. given & then
+        // 2. when & then
         // duplicate@toss.im으로 검증 시 -> 예외 발생시 성공
         assertThatThrownBy(() -> userValidator.validateEmail("duplicate@toss.im"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -80,10 +80,40 @@ public class UserValidatorTest {
         String forbiddenName = "시스템관리자";
 
 
-        // 2. given & then
+        // 2. when & then
         assertThatThrownBy(() -> userValidator.validateName(forbiddenName))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("사용할 수 없는 이름입니다.");
+    }
+
+    @Test
+    @DisplayName("회원가입시 필수값을 누락하면 예외가 발생한다.")
+    void validateValueRequired_fail() {
+
+        // 1. given
+        // 이름이 null을 가정
+        String invalidName = null;
+
+        // 2. when & then
+        assertThatThrownBy(() -> userValidator.validateName(invalidName))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("이름은 필수입니다.");
+    }
+
+    @Test
+    @DisplayName("이름이 빈 값이거나 공백이면 예외가 발생한다.")
+    void validateName_EmptyOrBlank_fail() {
+
+        // 1. given
+        String emptyName = "";
+        String blankName = "   ";
+
+        // 2. when & then
+        assertThatThrownBy(() -> userValidator.validateName(emptyName))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> userValidator.validateName(blankName))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
