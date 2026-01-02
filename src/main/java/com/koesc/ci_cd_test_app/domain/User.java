@@ -8,6 +8,9 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Domain <-> Entity 구분하면 좋은점 ? <- 공부 필요
+ */
 @Getter
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE) // 빌더용 전체 생성자 (외부 접근 막음)
@@ -23,13 +26,16 @@ public class User {
 
     /**
      * 포인트 충전
+     *
+     * point라는 데이터를 User가 가지고 있다면,
+     * 그 데이터를 사용하는 규칙(0원 이상 충전, 잔액 부족 검사 등)도 User가 직접 관리하는 것이 맞다.
      */
     public User chargePoint(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("0원 이상 충전해야 합니다.");
         }
 
-        // 2. 기존 객체 수정 (toBuilder 사용)
+        // 불변성 유지 : toBuilder()를 사용하여 기존 객체를 수정하는 대신 새로운 객체를 반환 (Side Effect)
         // 해석 : 나(this)를 복사해서 빌더를 열어, 근데 point랑 updatedAt만 바꿀 거야
         return this.toBuilder()
                 .point(this.point.add(amount)) // 포인트 변경

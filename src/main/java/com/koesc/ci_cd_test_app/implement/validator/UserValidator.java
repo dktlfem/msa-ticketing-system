@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component;
 /**
  * Validator : 검증 전용, 단순한 null 체크가 아니라 DB를 뒤져봐야 알 수 있는 검증
  *
- * @Valid, @NotNull, @Email : 형식 검증은 DTO에서 검증 -> "이메일 형식이 맞아?", "빈 값 아니야?", "비밀번호 8자 이상이야?"
- * DB 조회, 로직 : 비즈니스 검증 -> "형식은 맞는데... 이미 가입된 이메일 아니야?", "탈퇴한 회원 아니야?"
+ * @Valid, @NotNull, @Email 어노테이션으로 DTO에서 1차 검증하지만,
+ * Implement Layer인 Validator에서 한 번 더 로직으로 검증해주는 것이 안전하다.
+ * -> Why? : 나중에 API가 아닌 내부의 다른 경(예: 배치 작업, 관리자 기능 등)을 통해 UserValidator가 호출될 때,
+ *           DTO 검증 거치지 않은 데이터가 들어올 수도 있기 때문이다.
  */
 
 @Component
@@ -34,6 +36,16 @@ public class UserValidator {
      * - 회원가입 또는 회원정보 수정 시 admin, 관리자가 포함되어있으면 예외를 던진다
      */
     public void validateName(String name) {
+
+        // 1. 필수값(null 또는 공백) 체크 추가
+        // isBlank(): 문자열이 비어있거나 공백 있는지만 체크한다
+        // isBlank()는 isEmpty() 상위 호환
+
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("이름은 필수입니다.");
+        }
+
+        // 2. 비즈니스 금칙어
         if (name.contains("admin") || name.contains("관리자")) {
             throw new IllegalArgumentException("사용할 수 없는 이름입니다.");
         }
