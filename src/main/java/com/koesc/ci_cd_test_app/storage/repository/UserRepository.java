@@ -9,10 +9,14 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     // 기본적인 save(), findById(), delete() 등은 이미 만들어져 있음
+    // 필요한 경우 QueryDSL이나 커스텀 쿼리 추가 예정
 
     // 커스텀 쿼리 메서드 (이름만 잘 지으면 SQL 자동 생성)
     // select * from users where email = ?
     Optional<UserEntity> findByEmail(String email);
+
+    // 이 메서드를 추가하면 JPA가 자동으로 SELECT 1 쿼리를 생성함.
+    boolean existsByEmail(String email);
 
     // 만약 복잡한 쿼리가 필요하면 @Query 사용 가능
     // @Query("SELECT u FROM UserEntity u WHERE u.point > :minPoint")

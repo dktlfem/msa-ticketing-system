@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper {
 
-    // Entity -> Domain (Reader에서 사용)
+    // Entity -> Domain (Reader)
     public User toDomain(UserEntity entity) {
         return User.builder()
                 .id(entity.getId())
@@ -26,15 +26,20 @@ public class UserMapper {
                 .build();
     }
 
-    // Domain -> Entity (Writer에서 사용 - 주로 Insert 용)
+    // 신규 생성용 (Insert)
     public UserEntity toEntity(User user) {
         return UserEntity.builder()
-                // ID는 DB가 자동 생성하므로 보통 넣지 않음 (수정이면 필요할 수 있음)
                 .email(user.getEmail())
                 .name(user.getName())
                 .password(user.getPassword())
                 .point(user.getPoint())
-                // createdAt, updatedAt은 DB가 처리하거나 Entity 내부 로직으로 처리 !!이해 안됨!!
                 .build();
+    }
+
+    // 기존 엔티티 수정용 (Update) - Dirty Checking 활용
+    public void updateEntityFromDomain(User user, UserEntity entity) {
+        // ID나 Email은 변경 불가가 원칙인 경우가 많음
+        entity.updateInfo(user.getName(), user.getPassword());
+        entity.updatePoint(user.getPoint());
     }
 }

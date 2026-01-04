@@ -53,4 +53,15 @@ public class UserEntity {
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void updateInfo(String name, String password) {
+        this.name = name;
+        this.password = password;
+    }
+
+    // 외부에서 setPoint()로 마구잡이로 수정하는 게 아닌,
+    // 명확한 의미를 가진 메서드(updatePoint)를 통해서만 변경을 허용하는 것이 객체지향의 캡슐화를 지키는 좋은 습관이다.
+    public void updatePoint(BigDecimal point) {
+        this.point = point;
+    }
 }
