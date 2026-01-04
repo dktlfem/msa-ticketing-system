@@ -7,65 +7,77 @@ import com.koesc.ci_cd_test_app.storage.repository.UserRepository;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
 
-@DataJpaTest
-@Import({UserReader.class, UserMapper.class})
+@ExtendWith(MockitoExtension.class)
+@DisplayName("UserReader 단위 테스트 (Mock)")
 public class UserReaderTest {
 
-    @Autowired private UserReader userReader;
-    @Autowired private UserRepository userRepository; // 테스트 데이터 넣기용
+    @Mock
+    private UserRepository userRepository;
+
+    @Spy // Mapper는 단순 변환 로직이므로 실제 로직을 사용하도록 설정
+    private UserMapper userMapper;
+
+    @InjectMocks
+    private UserReader userReader;
 
     @Test
     @DisplayName("id를 통해 사용자를 조회할 수 있다.")
     void readById_success() {
 
         // 1. given
+        Long userId = 1L;
         UserEntity entity = UserEntity.builder()
-                .email("id_test@toss.im") // 이메일 충돌 방지
+                .id(userId)
+                .email("test@toss.im")
                 .name("최민석")
-                .password("password")
-                .point(BigDecimal.ZERO)
                 .build();
 
-        UserEntity savedEntity = userRepository.save(entity);
-
-        System.out.println("생성된 ID : " + savedEntity.getId());
+        given(userRepository.findById(userId)).willReturn(Optional.of(entity));
 
         // 2. when
-        User user = userReader.read(savedEntity.getId());
+        User user = userReader.read(userId);
 
         // 3. then
-        assertThat(user).isNotNull();
-        assertThat(user.getId()).isEqualTo(savedEntity.getId());
+        assertThat(user.getId()).isEqualTo(userId);
         assertThat(user.getName()).isEqualTo("최민석");
     }
 
     @Test
     @DisplayName("이메일로 사용자를 조회할 수 있다.")
-    void readByEmail_success() {
+    void readByEmail_success1() {
 
         // 1. given
-        // DB에 이미 저장된 데이터(Entity)가 있을 때, 이걸 꺼내서 도메인 객체로 잘 변환해서 가져오는지 테스트
+        String email = "test@toss.im";
         UserEntity entity = UserEntity.builder()
-                .email("test@toss.im")
-                .name("민석")
-                .password("pw")
-                .point(BigDecimal.ZERO)
+                .id(1L)
+                .email(email)
+                .name("최민석")
+                .password("test1234")
                 .build();
 
-        UserEntity savedEntity = userRepository.save(entity);
+        // Repository가 해당 이메일로 조회했을 때 Optional<UserEntity>를 반환하도록 설정
+        given(userRepository.findByEmail(email)).willReturn(Optional.of(entity));
 
-        // 2. when (Reader로 데이터 조회)
-        User user = userReader.readByEmail(savedEntity.getEmail());
+        // 2. when
+        User user = userReader.readByEmail(email);
 
         // 3. then
-        assertThat(user.getName()).isEqualTo("민석");
+        assertThat(user).isNotNull();
+        assertThat(user.getEmail()).isEqualTo(email);
+        assertThat(user.getName()).isEqualTo("최민석");
+
+        // Mapper가 필드 누락 없이 잘 변환했는지 체크
+        assertThat(user.getId()).isEqualTo(1L);
     }
 }

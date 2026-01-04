@@ -26,7 +26,7 @@ public class UserValidator {
      * - 통과하면 아무 일도 일어나지 않는다
      */
     public void validateEmail(String email) {
-        if (userRepository.findByEmail(email).isPresent()) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
     }

@@ -18,19 +18,17 @@ public class UserWriter {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
-    /**
-     * 사용자 생성 및 수정 (Create & Update)
-     */
-    public User save(User user) {
-        // 1. Domain -> Entity 변환 (Mapper 역할)
+    // 생성 전용
+    public User create(User user) {
         UserEntity entity = userMapper.toEntity(user);
-
-        // 2. DB 저장 (Repository 역할)
-        // save()는 ID가 없으면 Insert, 있으면 Update를 수행한다.
-        UserEntity savedEntity = userRepository.save(entity);
-
-        // 3. Entity -> Domain 변환 (Mapper 역할)
-        // 저장되면서 생성된 ID나 createdAt 등의 최신 정보를 담아서 반환
-        return userMapper.toDomain(savedEntity);
+        return userMapper.toDomain(userRepository.save(entity));
     }
+
+    // 수정 전용 (Dirty Checking 활용)
+    public void update(User user, UserEntity entity) {
+        userMapper.updateEntityFromDomain(user, entity);
+        // 여기서 userRepository.save()를 호출하지 않아도
+        // @Transactional이 걸린 Service 계층에서 종료 시점에 자동으로 Update 쿼리 발생
+    }
+
 }

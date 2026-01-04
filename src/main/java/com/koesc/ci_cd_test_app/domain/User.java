@@ -39,7 +39,7 @@ public class User {
         // 해석 : 나(this)를 복사해서 빌더를 열어, 근데 point랑 updatedAt만 바꿀 거야
         return this.toBuilder()
                 .point(this.point.add(amount)) // 포인트 변경
-                .updatedAt(LocalDateTime.now()) // 수정일 변경 !!!포인트를 충전한다고 해서 회원 정보를 수정해야하는가!!!
+                .updatedAt(LocalDateTime.now()) // 수정일 변경
                 .build(); // 나머지는 기존 값 유지됨
     }
 
