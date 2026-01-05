@@ -32,7 +32,7 @@ public class UserManager {
         userValidator.validateName(user.getName());
 
         // 3. 저장 (Writer)
-        return userWriter.save(user);
+        return userWriter.create(user);
     }
 
     /**
