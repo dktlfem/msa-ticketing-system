@@ -5,6 +5,7 @@ import com.koesc.ci_cd_test_app.api.response.UserResponseDTO;
 import com.koesc.ci_cd_test_app.domain.User;
 import com.koesc.ci_cd_test_app.implement.manager.UserManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserManager userManager;
@@ -21,12 +23,15 @@ public class UserService {
     public UserResponseDTO signUp(UserRequestDTO request) {
 
         // 1. RequestDTO -> Domain (도메인 모델의 정적 팩토리 메서드 사용)
+        // 비밀번호는 추후 인코딩 로직 추가 예정 BCryptPasswordEncoder
         User user = User.create(request.email(), request.name(), request.password());
 
         // 2. Manager를 통해 비즈니스 프로세스 실행
         User savedUser = userManager.register(user);
 
-        // 3. Domain -> ResponseDTO 변환 (간단한 변환은 여기서 수행)
+        log.info("Successfully signed up user: {}", savedUser.getEmail());
+
+        // 3. Domain -> ResponseDTO 변환 (from 정적 메서드 활용 추후에 생성 필요)
         return new UserResponseDTO(
                 savedUser.getId(),
                 savedUser.getEmail(),
