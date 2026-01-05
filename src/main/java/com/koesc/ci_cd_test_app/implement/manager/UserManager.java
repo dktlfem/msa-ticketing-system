@@ -20,7 +20,7 @@ public class UserManager {
     private final UserValidator userValidator;
 
     /**
-     * 회원 가입을 위한 구현체 조립
+     * 회원 가입 (Create)
      * Validator로 검증하고 Writer로 저장
      */
     public User register(User user) {
@@ -36,10 +36,29 @@ public class UserManager {
     }
 
     /**
-     * 사용자 조회
-     * Reader를 통해 조회
+     * 사용자 정보 및 포인트 수정 (Update)
+     * Dirty Checking을 활용하여 별도의 save 호출 없이 상태를 변경
+     */
+    /*public void update(User user) {
+        // 1. 기존 엔티티를 영속성 컨텍스트에 로드 (Reader 활용)
+        // UserWriter.update가 엔티티를 필요로 하므로, 여기서 Reader를 통해 가져옴
+        UserEntity entity = userReader.readEntity(user.getId());
+
+        // 2. 비즈니스 검증 (수정 시에도 이름 정책 등 검증 필요할 수 있음)
+        userValidator.validateName(user.getName());
+
+        // 3. 변경 감지(Dirty Checking)를 통한 업데이트
+        userWriter.update(user, entity);
+    }*/
+
+    /**
+     * 단일 사용자 조회 (Read)
      */
     public User getUser(Long userId) {
         return userReader.read(userId);
+    }
+
+    public User getUserByEmail(String email) {
+        return userReader.readByEmail(email);
     }
 }
