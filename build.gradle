@@ -57,6 +57,9 @@ dependencies {
     // Tracing : MDC 및 추적을 위한 기초 의존성 (Spring Boot 3.x 기반)
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 
+    // Caffeine Cache 의존성 추가
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
