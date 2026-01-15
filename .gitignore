@@ -40,4 +40,8 @@ out/
 src/main/resources/application-local.properties
 
 # Node.js 모듈 디렉토리 (프론트엔드 모듈)
-/frontend/node_modules
+/frontend/node_modules.DS_Store
+src/**/.DS_Store
+.gradle/
+build/
+.DS_Store
