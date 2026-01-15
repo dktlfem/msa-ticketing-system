@@ -14,6 +14,11 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // 빈이 생성될 때 무조건 로그를 찍게 만듦.
+    public SecurityConfig() {
+        System.out.println("[DEBUG] SecurityConfig Bean is being created!");
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
