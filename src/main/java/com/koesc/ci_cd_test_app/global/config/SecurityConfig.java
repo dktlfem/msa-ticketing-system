@@ -21,6 +21,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // 필터 체인이 생성되는 시점에 로그를 찍어 확실히 확인합니다.
+        System.out.println("🚨 [DEBUG] SecurityFilterChain is being configured!");
+
         http
                 // 테스트를 위해 CSRF 비활성화 (로컬 테스트 및 API 서버에서는 세션 기반이 아니므로 반드시 꺼야 POST 요청이 허용됨.)
                 .csrf(csrf -> csrf.disable())
@@ -35,14 +38,10 @@ public class SecurityConfig {
                 * 3. Swagger 문서 허용
                 */
                 .authorizeHttpRequests(auth -> auth
-                        // DispatcherType.ERROR를 허용하여 내부 에러 발생 시 403 대신 진짜 에러(500 등)를 보게함.
+                        // DispatcherType.ERROR를 허용 (내부 에러 발생 시 리다이렉트 허용)
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // 1. Actuator 및 API 경로 전체 허용
-                        .requestMatchers(new AntPathRequestMatcher("/actuator/**")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/v1/**")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/error")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/swagger-ui/**"),
-                                         new AntPathRequestMatcher("/v3/api-docs/**")).permitAll()
+                        .requestMatchers("/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
