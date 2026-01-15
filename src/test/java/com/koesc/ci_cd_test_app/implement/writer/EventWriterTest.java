@@ -13,7 +13,9 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 /**
  * EventWriter : 저장과 동시에 Cache Eviction(삭제)을 통해 데이터 정합성을 맞춘다.
@@ -55,5 +57,11 @@ public class EventWriterTest {
 
         // 2. when
         Event result = eventWriter.save(event);
+
+        // 3. then
+        verify(eventRepository).save(any(EventEntity.class));
+
+        // [중요] 저장 후 반드시 캐시 키가 삭제되었는지 확인 (Write-Through 전략 검증)
+        verify(redisTemplate).delete("event: " + eventId);
     }
 }

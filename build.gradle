@@ -44,6 +44,19 @@ dependencies {
     // Redis 의존성 추가
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // 애플리케이션 상태 및 지표 노출을 위한 기본 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Micrometer 지표를 Prometheus 포맷으로 변환해주는 어댑터
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // Resilience4j : 서킷 브레이커 및 복구력 핵심 라이브러리
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+    implementation 'org.springframework.boot:spring-boot-starter-aop' // @CircuitBreaker 사용을 위해 필수
+
+    // Tracing : MDC 및 추적을 위한 기초 의존성 (Spring Boot 3.x 기반)
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
