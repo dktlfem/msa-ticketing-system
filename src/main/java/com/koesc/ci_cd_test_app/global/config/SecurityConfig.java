@@ -1,5 +1,6 @@
 package com.koesc.ci_cd_test_app.global.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -29,6 +30,8 @@ public class SecurityConfig {
                 * 3. Swagger 문서 허용
                 */
                 .authorizeHttpRequests(auth -> auth
+                        // DispatcherType.ERROR를 허용하여 내부 에러 발생 시 403 대신 진짜 에러(500 등)를 보게함.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // 1. Actuator 및 API 경로 전체 허용
                         .requestMatchers(new AntPathRequestMatcher("/actuator/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/v1/**")).permitAll()
