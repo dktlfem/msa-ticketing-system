@@ -1,82 +1,46 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.0'
+    id 'org.springframework.boot' version '3.4.0' apply false
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.koesc'
-version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+allprojects {
+    // 여기서 group, version, repositories를 한 번에 해결
+    group = 'com.koesc'
+    version = '0.0.1-SNAPSHOT'
 
-repositories {
-    mavenCentral()
+    repositories {
+        mavenCentral()
+    }
 }
 
-dependencies {
+subprojects {
+    // 모든 서브 모듈(user-app, concert-app 등)에 공통으로 적용
+    apply plugin: 'java'
+    apply plugin: 'java-library' // 이 줄을 반드시 추가해야 api()를 쓸 수 있음.
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'org.springframework.boot'
 
-    implementation platform('org.springframework.boot:spring-boot-dependencies:3.4.0')
-    // implementation('org.apache.commons:commons-compress:1.26.1')
-    implementation 'org.hibernate:hibernate-community-dialects:6.5.2.Final'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'jakarta.annotation:jakarta.annotation-api'
+    dependencies {
+        // Lombok
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
 
-    // 시큐리티 의존성 추가
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    testImplementation 'org.springframework.security:spring-security-test'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        // testImplementation으로 선언된 라이브러리는 전파되지 않으므로,
+        // common-module의 테스트 폴더에 이 라이브러리를 넣어봤자 이를 상속받는
+        // user-app의 테스트폴더에는 @WithMockUser 등을 사용할 수 없다.
+        // 그러므로 루트 build.gradle에 위치시킴
+        testImplementation 'org.springframework.security:spring-security-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // jdbc 의존성 추가
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
+        // 테스트 Lombok
+        testCompileOnly 'org.projectlombok:lombok'
+        testAnnotationProcessor 'org.projectlombok:lombok'
+    }
 
-    // jjwt 의존성 추가
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
-    implementation 'io.jsonwebtoken:jjwt-impl:0.12.6'
-    implementation 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
-    // valid 검증 의존성 추가
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // Swagger(OpenAPI) 의존성 추가
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
-
-    // Redis 의존성 추가
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
-    // 애플리케이션 상태 및 지표 노출을 위한 기본 라이브러리
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // Micrometer 지표를 Prometheus 포맷으로 변환해주는 어댑터
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-
-    // Resilience4j : 서킷 브레이커 및 복구력 핵심 라이브러리
-    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
-    implementation 'org.springframework.boot:spring-boot-starter-aop' // @CircuitBreaker 사용을 위해 필수
-
-    // Tracing : MDC 및 추적을 위한 기초 의존성 (Spring Boot 3.x 기반)
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-
-    // Caffeine Cache 의존성 추가
-    implementation 'com.github.ben-manes.caffeine:caffeine'
-
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'com.mysql:mysql-connector-j'
-    annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-
-    // @DataJpaTest가 이 의존성을 찾고 H2 인메모리 DB를 통한 테스트 수행
-    testImplementation 'com.h2database:h2'
-
-}
-
-bootJar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    archiveFileName = 'app.jar'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
+    // 여기서 모든 자식의 테스트 설정을 한꺼번에 잡음.
+    tasks.named('test') {
+        useJUnitPlatform()
+    }
 }

@@ -1,0 +1,21 @@
+dependencies {
+    // 공통 모듈을 가져오면 그 안에 든 JPA, Web, Redis 등이 다 따라옴.
+    implementation project(':common-module')
+
+    // [유저 전용] jjwt(보안), datafaker(데이터 시딩) 등은 여기에만 적음.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // 유저 전용 : 데이터 시딩
+    implementation 'net.datafaker:datafaker:2.1.0'
+
+    // DB 드라이버
+    runtimeOnly 'com.mysql:mysql-connector-j'
+}
+
+// 💡 배포 파일명 고정 설정은 앱마다 다를 수 있으니 여기에 둠.
+bootJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'app.jar'
+}
