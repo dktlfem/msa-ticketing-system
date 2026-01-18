@@ -1,0 +1,14 @@
+dependencies {
+    implementation project(':common-module')
+
+    // 콘서트 전용 : 데이터 시딩
+    implementation 'net.datafaker:datafaker:2.1.0'
+
+    // DB 드라이버
+    runtimeOnly 'com.mysql:mysql-connector-j'
+}
+
+bootJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'app.jar'
+}

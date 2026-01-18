@@ -1,0 +1,35 @@
+plugins {
+    id 'java-library' // 공통 모듈 상단에도 명시적으로 추가해주는 것이 좋음.
+}
+
+dependencies {
+    api platform('org.springframework.boot:spring-boot-dependencies:3.4.0')
+    api 'org.hibernate:hibernate-community-dialects:6.5.2.Final'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+    api 'jakarta.annotation:jakarta.annotation-api'
+    api 'org.springframework.boot:spring-boot-starter-security'
+    api 'org.springframework.boot:spring-boot-starter-jdbc'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+    api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+    api 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // 모니터링 및 트레이싱
+    api 'io.micrometer:micrometer-tracing-bridge-brave'
+    api 'io.micrometer:micrometer-registry-prometheus'
+
+    // 캐시 및 서킷 브레이커
+    api 'com.github.ben-manes.caffeine:caffeine'
+    api 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+    api 'org.springframework.boot:spring-boot-starter-aop'
+
+    // 공통 테스트 의존성 (모든 앱으로 전파)
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'com.h2database:h2'
+}
+
+bootJar { enabled = false }
+jar { enabled = true }

@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':common-module')
+    runtimeOnly 'com.mysql:mysql-connector-j'
+}
+
+bootJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'app.jar'
+}
