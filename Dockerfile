@@ -9,7 +9,11 @@ COPY build.gradle settings.gradle .
 
 # 소스 코드 및 모든 리소스 파일 복사 (프로파일 파일 포함)
 # 🌟 src 디렉토리 전체를 복사하여 모든 application-{profile}.properties 파일을 포함시킵니다.
-COPY src src
+# COPY src src
+
+# 수정후
+# 프로젝트 루트의 모든 파일과 폴더(모듈 폴더 포함)를 복사합니다.
+COPY . .
 
 # 최종 빌드 명령 (테스트 제외)
 RUN ./gradlew clean build -x test
