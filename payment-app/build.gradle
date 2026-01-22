@@ -7,3 +7,7 @@ bootJar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveFileName = 'app.jar'
 }
+
+springBoot {
+    mainClass = 'com.koesc.ci_cd_test_app.PaymentApplication'
+}
