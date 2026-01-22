@@ -11,12 +11,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.IntStream;
 
 @Slf4j
-@Profile("!prod")
+// @Profile("!prod") : 프로필 dev 강제 지정을 위한 주석처리
+@Profile("dev") // docker-compose.yml에 SPRING_PROFILES_ACTIVE: dev 설정과의 맞춤
 @Component
 @RequiredArgsConstructor
 public class UserDataSeeder implements CommandLineRunner {
@@ -37,16 +37,25 @@ public class UserDataSeeder implements CommandLineRunner {
         log.info("[SCRUM-35] 대규모 부하 테스트를 위한 데이터 시딩 시작... (목표: 1,000명)");
 
         // 2. 테스트용 유저 데이터 1,000개 생성 (k6 부하 테스트 타겟)
-        List<UserEntity> allUsers = IntStream.rangeClosed(1, 1000)
-                .mapToObj(i -> UserEntity.builder()
+        //    Set을 활용한 메모리 내에서 이메일 중복 제거
+        Set<String> uniqueEmails = new HashSet<>();
+        List<UserEntity> allUsers = new ArrayList<>();
+
+        while (uniqueEmails.size() < 1000) {
+            String email = faker.internet().emailAddress();
+
+            // Set.add()는 중복된 값이 없을 때만 true를 반환함
+            if (uniqueEmails.add(email)) {
+                allUsers.add(UserEntity.builder()
                         .name(faker.name().fullName())
-                        .email(faker.internet().emailAddress())
+                        .email(email)
                         .password("password123!")
                         .point(BigDecimal.valueOf(100000))
-                        .build())
-                .toList();
+                        .build());
+            }
+        }
 
-        // 전체 저장
+        // 전체 저장 (한 번의 인서트로 성능 최적화)
         userRepository.saveAll(allUsers);
 
         // 3. @gmail.com 유저만 필터링하는 로직 (Stream API 실습)
