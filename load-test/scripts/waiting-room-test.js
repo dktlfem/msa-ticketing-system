@@ -7,7 +7,7 @@ export const options = {
 };
 
 export default function () {
-    const url = 'http://192.168.124.100:8085/api/v1/waiting-room/join';
+    const url = 'http://192.168.219.102:8085/api/v1/waiting-room/join';
     const payload = JSON.stringify({
         userId: 1,
         eventId: 1,
