@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Import;
 
 @SpringBootApplication
 @Import(SecurityConfig.class)
-public class WaitingRoomApplication {
+public class EventApplication {
     public static void main(String[] args) {
-        SpringApplication.run(WaitingRoomApplication.class, args);
+        SpringApplication.run(EventApplication.class, args);
     }
 }

@@ -32,14 +32,14 @@ public class SecurityConfig {
                 /**
                 * 경로별 권한 설정
                 * 1. 모니터링 엔드포인트(/actuator/**) 허용
-                * 2. 부하 테스트용 API(/api/v1/**) 허용
+                * 2. 부하 테스트용 API(/api/v1/**, /api/v1/waiting-room/**) 허용
                 * 3. Swagger 문서 허용
                 */
                 .authorizeHttpRequests(auth -> auth
                         // DispatcherType.ERROR를 허용 (내부 에러 발생 시 리다이렉트 허용)
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // 1. Actuator 및 API 경로 전체 허용
-                        .requestMatchers("/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/waiting-room/**", "/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
