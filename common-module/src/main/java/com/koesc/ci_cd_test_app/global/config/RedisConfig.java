@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -17,6 +18,9 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
+    @Value("${spring.data.redis.password}")
+    private String password;
+
     /**
      * Why? Jedis 대신 Lettuce를 사용하는 이유
      * - Netty 기반의 비동기 이벤트 처리 지원
@@ -25,7 +29,11 @@ public class RedisConfig {
      */
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(host, port);
+        // 2. Standalone 설정을 통해 패스워드를 명시적으로 주입함.
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
+        config.setPassword(password);
+
+        return new LettuceConnectionFactory(config);
     }
 
     @Bean
