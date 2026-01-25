@@ -58,7 +58,16 @@ pipeline {
                 
                         // 3. JAR 파일 생성
                         sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
+
+                        // 🌟 [MSA 포인트] 빌드할 대상 모듈과 JAR 경로 정의
+                        // 현재는 user-app을 배포하지만, 나중에 다른 모듈로 쉽게 바꿀 수 있다.
+                        def moduleName = "user-app"
+                        def jarPath = "${moduleName}/build/libs/${moduleName}-0.0.1-SNAPSHOT.jar"
                 
+                        // 🌟 [핵심] --build-arg를 사용하여 Dockerfile의 JAR_PATH에 경로 주입
+                        echo "--- Building Docker Image for ${moduleName} ---"
+                        sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+
                         // 4. Docker 이미지 빌드 및 푸시
                         sh "docker build --no-cache -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
                         sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
