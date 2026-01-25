@@ -95,25 +95,27 @@ pipeline {
                     // 2. 쉘 스크립트 실행 (따옴표 3개 주의!)
                     sh """
                         ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 '
-                            # Jenkins 환경 변수를 리눅스 환경 변수로 주입 (반드시 필요)
-                            export BUILD_NUMBER=${BUILD_NUMBER}
+
+                            # 1. 작업 디렉토리 이동 (가장 먼저 수행)
+                            cd /home/ubuntu/app/ || exit
+
+                            # 2. .env 파일 동적 생성 (Jenkins 변수를 활용하여 매번 새로 작성)
+                            export BUILD_NUMBER=${BUILD_NUMBER} 
                             export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL}"
                             export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME}"
                             export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD}"
                             export SPRING_PROFILES_ACTIVE=dev
                             
-                            cd /home/ubuntu/app/ &&
-
-                            # 0. Nginx 안전장치 (없으면 켬)
+                            # 3. Nginx 안전장치 (없으면 켬)
                             docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
 
-                            # 1. Docker Hub 로그인 (리눅스 변수니까 앞에 \\\$ 붙임)
+                            # 4. Docker Hub 로그인 (리눅스 변수니까 앞에 \\\$ 붙임)
                             docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
 
-                            # 2. 현재 실행 중인 포트 확인 (Blue/Green 판별)
+                            # 5. 현재 실행 중인 포트 확인 (Blue/Green 판별)
                             CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
 
-                            # 3. 다음 배포할 포트/서비스 결정
+                            # 6. 다음 배포할 서비스 결정
                             if [ "\$CURRENT_PORT" = "8081" ]; then
                                 NEXT_PORT="8082"
                                 NEXT_SERVICE="app_green:8082"
@@ -124,26 +126,26 @@ pipeline {
                                 OLD_CONTAINER="app_green"
                             fi
 
-                            echo "--- Deploying to: \$NEXT_SERVICE with Profile: dev ---"
+                            echo "--- Deploying to: \$NEXT_SERVICE with .env variables ---"
 
-                            # 4. 새 컨테이너 실행 (환경 변수 상속을 위해 -e 옵션 또는 docker-compose 활용)
+                            # 7. 새 버전 이미지 풀 및 특정 서비스만 실행
+                            # .env 파일 덕분에 별도의 -e 옵션 없이도 DB 정보가 주입됩니다.
                             docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                            
-                            # docker-compose가 쉘의 환경변수를 읽도록 실행
-                            docker-compose up -d --no-deps nginx_proxy \$(echo \$NEXT_SERVICE | cut -d: -f1)
+                            docker-compose up -d --no-deps \$(echo \$NEXT_SERVICE | cut -d: -f1)
 
-                            # 5. Health Check (새 서버가 뜰 때까지 대기)
-                            echo "--- Waiting for Health Check... ---"
+                            # docker-compose가 쉘의 환경변수를 읽도록 실행
+                            # docker-compose up -d --no-deps nginx_proxy \$(echo \$NEXT_SERVICE | cut -d: -f1)
+
+                            # 8. Health Check 대기 (스프링 부트가 완전히 뜰 때까지)
+                            echo "--- Waiting for Spring Boot Startup (15s)... ---"
                             sleep 15
 
-                            # 6. Nginx 설정 변경 (핵심: 문법 안 깨지게 조심!)
+                            # 9. Nginx 설정 변경 및 리로드
                             sed -i "s/server app_.*;/server \$NEXT_SERVICE;/g" nginx.conf
-
-                            # 7. Nginx Reload (트래픽 전환)
                             docker exec nginx_proxy nginx -s reload
                             echo "--- Traffic Switched to \$NEXT_SERVICE ---"
 
-                            # 8. 구 버전(Old) 컨테이너 정리
+                            # 10. 구 버전(Old) 컨테이너 정리
                             docker-compose stop \$OLD_CONTAINER
                             docker-compose rm -f \$OLD_CONTAINER
                             echo "--- Cleanup Complete: \$OLD_CONTAINER ---"
