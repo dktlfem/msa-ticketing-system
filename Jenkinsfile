@@ -95,12 +95,13 @@ pipeline {
                     // 2. 쉘 스크립트 실행 (따옴표 3개 주의!)
                     sh """
                         ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 '
-                            # ---------------------------------------------------------
-                            # [주의] Jenkins 변수는 그냥 \${...}, 리눅스 변수는 \\\$... 로 씁니다.
-                            # ---------------------------------------------------------
-                    
-                            # Jenkins가 빌드 번호를 주입해줌
+                            # Jenkins 환경 변수를 리눅스 환경 변수로 주입 (반드시 필요)
                             export BUILD_NUMBER=${BUILD_NUMBER}
+                            export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL}"
+                            export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME}"
+                            export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD}"
+                            export SPRING_PROFILES_ACTIVE=dev
+                            
                             cd /home/ubuntu/app/ &&
 
                             # 0. Nginx 안전장치 (없으면 켬)
@@ -123,15 +124,17 @@ pipeline {
                                 OLD_CONTAINER="app_green"
                             fi
 
-                            echo "--- Current: \$CURRENT_PORT, Deploying to: \$NEXT_SERVICE ---"
+                            echo "--- Deploying to: \$NEXT_SERVICE with Profile: dev ---"
 
-                            # 4. 새 버전(Next) 컨테이너 실행
-                            docker pull dktlfem/ci-cd-test:${BUILD_NUMBER}
+                            # 4. 새 컨테이너 실행 (환경 변수 상속을 위해 -e 옵션 또는 docker-compose 활용)
+                            docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            
+                            # docker-compose가 쉘의 환경변수를 읽도록 실행
                             docker-compose up -d --no-deps nginx_proxy \$(echo \$NEXT_SERVICE | cut -d: -f1)
 
                             # 5. Health Check (새 서버가 뜰 때까지 대기)
                             echo "--- Waiting for Health Check... ---"
-                            sleep 10
+                            sleep 15
 
                             # 6. Nginx 설정 변경 (핵심: 문법 안 깨지게 조심!)
                             sed -i "s/server app_.*;/server \$NEXT_SERVICE;/g" nginx.conf
