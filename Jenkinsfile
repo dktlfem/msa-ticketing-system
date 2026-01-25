@@ -1,5 +1,12 @@
 pipeline {
-    agent any 
+    agent any
+
+    // 1. 빌드 시 선택할 수 있는 파라미터 정의
+    parameters {
+        choice(name: 'TARGET_MODULE', 
+               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
+               description: '빌드 및 배포할 마이크로서비스 모듈을 선택하세요.')
+    }
     
     // 환경 변수 설정 (사용자님의 Docker Hub ID와 EC2 정보로 변경해야 합니다.)
     environment {
@@ -56,20 +63,22 @@ pipeline {
                         sh 'dos2unix ./gradlew'
                         sh 'chmod +x ./gradlew'
                 
-                        // 3. JAR 파일 생성
+                        // 3. 전체 모듈 JAR 파일 생성 (의존성 포함)
                         sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
 
-                        // 🌟 [MSA 포인트] 빌드할 대상 모듈과 JAR 경로 정의
-                        // 현재는 user-app을 배포하지만, 나중에 다른 모듈로 쉽게 바꿀 수 있다.
-                        def moduleName = "user-app"
+                        // [MSA 동적 할당] 선택한 파라미터(TARGET_MODULE)를 변수에 주입
+                        def moduleName = params.TARGET_MODULE
                         def jarPath = "${moduleName}/build/libs/${moduleName}-0.0.1-SNAPSHOT.jar"
+
+                        // [디버깅] Docker 빌드 전 파일 존재 여부 재확인
+                        echo "--- Target Module: ${moduleName} ---"
+                        sh "ls -l ${jarPath}"
                 
-                        // 🌟 [핵심] --build-arg를 사용하여 Dockerfile의 JAR_PATH에 경로 주입
+                        // 🌟 [핵심] --build-arg를 사용하여 Dockerfile의 JAR_PATH에 동적 경로 주입
                         echo "--- Building Docker Image for ${moduleName} ---"
                         sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
-
-                        // 4. Docker 이미지 빌드 및 푸시
-                        sh "docker build --no-cache -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                
+                        // 4. 생성된 이미지 푸시
                         sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     }
                 }
