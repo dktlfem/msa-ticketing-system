@@ -22,11 +22,18 @@ dependencies {
     // 캐시 및 서킷 브레이커
     api 'com.github.ben-manes.caffeine:caffeine'
     api 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
-    api 'org.springframework.boot:spring-boot-starter-aop'
+    api 'org.springframework.boot:spring-boot-starter-aop' // @CircuitBreaker 작동을 위해 필수
+
+    // 데이터 시딩
+    api 'net.datafaker:datafaker:2.1.0'
+
+    // Resilience4j 핵심 라이브러리
+    api 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+    api 'io.github.resilience4j:resilience4j-micrometer:2.1.0' // 프로메테우스 메트릭 노출용
 
     // 공통 테스트 의존성 (모든 앱으로 전파)
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'com.h2database:h2'
 }
