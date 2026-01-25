@@ -1,21 +1,31 @@
-### First Commit Test
+> 🎟️ 대규모 트래픽 대응을 위한 티켓팅 시스템 (High-Availability MSA)
+"초당 1,100건의 트래픽에도 0%의 실패율을 보장하는 고가용성 아키텍처 구축"
 
-### feat: 새 브랜치 생성
+### 🚀 1. 핵심 성과 (Key Achievements)
+- [High Concurrency] Redis Sorted Set 기반 대기열 시스템으로 1,100+ TPS 처리량 확보
+- [Fault Tolerance] Resilience4j Circuit Breaker 도입으로 서비스 장애 전이(Cascading Failure) 원천 차단
+- [Observability] Prometheus & Grafana 연동을 통해 앱-인프라 전 구간 실시간 모니터링 체계 구축
+- [Reliability] HashSet 기반 중복 검증 로직으로 대규모 데이터(유저 1,000명, 공연 30개)의 무결성 보장
+---
+### 🛠️ 2. 기술 스택 (Tech Stack)
+- Language & Framework: Java 17, Spring Boot 3.3.2, Spring Data JPA
+- Infrastructure: MySQL 8.0, Redis, Docker, GitLab CI, Jenkins
+- Testing & Monitoring: k6 (Performance Testing), Prometheus, Grafana
+---
+### 🏗️ 3. 아키텍처 설계 (Architectural Evolution)
+- 단일 모듈의 한계를 극복하고 유지보수성과 독립적 배포를 위해 4계층 멀티 모듈 아키텍처로 고도화했습니다.
+- Presentation Layer: 클라이언트 요청 처리 및 응답 반환
+- Business Layer: 도메인 로직 및 서비스 흐름 제어 (AiModelService 등)
+- Implementation Layer: 기술적인 구현 세부사항 담당
+- Data Access Layer: 데이터베이스 물리적 접근
 
-### application.properties 환경 분리
-
-### WSL2 로컬 DB 와 AWS EC2 RDS 스키마 이름이 동일하여 충돌 안 나게끔 수정
-
-### 디렉터리 평탄한 구조로 수정 (2025/12/03 최민석)
-
-### 로컬 환경 스프링 부트 v4.0.0 -> v3.3.2 로 다운그레이드 
-
-### 코드 암묵지 ARCHITECTURE.md 시스템 설계 및 기술 정의용 파일 추가 (2025/12/09 최민석 [맥북 feature/my-first-api 브랜치에서 커밋])
-
-### 코드 암묵지 POLICY.md 프로젝트 규칙 및 운영 정책용 파일 추가 (2025/12/09 최민석 [맥북 feature/my-first-api 브랜치에서 커밋])
-
-### 대규모 티켓팅 시스템을 구축을 위한 이전 클래스들 삭제 후 재정립 (2025/12/31 최민석 [맥북 feature/my-first-api 브랜치에서 커밋])
-
-### 커밋 메시지 형식 변경 : [유형] : <내용> -> [유형](범위) : <내용> (+ Jira 도입 후 해당 티켓 번호 커밋 메시지에 포함시키기 [맥북 feature/my-first-api 브랜치에서 커밋])
-
-### 단일 모듈에서 멀티 모듈 아키텍처 마이그레이션 구조로 고도화 (2026/01/18 최민석 [맥북 refactor/multi-module-migration 브랜치에서 커밋])
+### 🔥 4. 핵심 엔지니어링 챌린지 (Core Challenges)
+#### 🛡️ 외부 API 장애 전이 방지 (Circuit Breaker)
+- 문제: AI 모델 서버 등 무거운 외부 연산 지연 시 WAS 스레드가 고갈되어 시스템 전체가 마비될 위험 식별
+- 해결: Resilience4j를 활용하여 독립적인 회로 정책 수립
+- 최근 10회 요청 중 실패율 50% 초과 시 회로 즉시 개방(OPEN)
+- Fallback Method 구현을 통한 안정적인 응답(Fail-fast) 보장
+---
+#### ⚡ 고부하 상황에서의 성능 임계치 검증 (k6 Stress Test)
+- 방법: 1VU(Smoke) → 200VU(Load) → 1,000VU(Stress) 단계별 시뮬레이션 수행
+- 결과: 1,000명 동시 접속 상황에서도 평균 지연시간 11.41ms의 초고속 응답 유지
