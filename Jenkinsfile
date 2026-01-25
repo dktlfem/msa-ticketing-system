@@ -66,15 +66,18 @@ pipeline {
                         // 3. 전체 모듈 JAR 파일 생성 (의존성 포함)
                         sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
 
+                        // 동적 경로 탐색 로직
                         // [MSA 동적 할당] 선택한 파라미터(TARGET_MODULE)를 변수에 주입
                         def moduleName = params.TARGET_MODULE
-                        def jarPath = "${moduleName}/build/libs/${moduleName}-0.0.1-SNAPSHOT.jar"
+                        def jarPath = sh(script: "ls ${moduleName}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
 
-                        // [디버깅] Docker 빌드 전 파일 존재 여부 재확인
-                        echo "--- Target Module: ${moduleName} ---"
+                        echo "--- Detected JAR Path: ${jarPath} ---"
+                        
+                        // [디버깅] 파일 정보 출력
                         sh "ls -l ${jarPath}"
                 
                         // 🌟 [핵심] --build-arg를 사용하여 Dockerfile의 JAR_PATH에 동적 경로 주입
+                        // --build-arg를 사용하여 Dockerfile의 JAR_PATH에 동적 경로를 전달합니다.
                         echo "--- Building Docker Image for ${moduleName} ---"
                         sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
                 
