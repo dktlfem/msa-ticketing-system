@@ -104,11 +104,11 @@ pipeline {
                             # 2. .env 파일 동적 생성 (Jenkins 변수를 활용하여 매번 새로 작성)
                             # 기존 export 방식 대신 실제 파일을 만들어 docker-compose가 읽게 함.
                             echo "BUILD_NUMBER=${BUILD_NUMBER}" > .env
-                            echo "SPRING_DATASOURCE_URL='${SPRING_DATASOURCE_URL}'" >> .env
-                            echo "SPRING_DATASOURCE_USERNAME='${SPRING_DATASOURCE_USERNAME}'" >> .env
-                            echo "SPRING_DATASOURCE_PASSWORD='${SPRING_DATASOURCE_PASSWORD}'" >> .env
+                            echo "SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL}\"" >> .env
+                            echo "SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME}\"" >> .env
+                            echo "SPRING_DATASOURCE_PASSWORD=\"${SPRING_DATASOURCE_PASSWORD}\"" >> .env
                             echo "SPRING_PROFILES_ACTIVE=dev" >> .env
-                            echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
+                            echo "REDIS_PASSWORD=\"${REDIS_PASSWORD}\"" >> .env
                             
                             # 3. Nginx 안전장치 (없으면 켬)
                             docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
