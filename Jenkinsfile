@@ -16,6 +16,8 @@ pipeline {
         // 2. AWS EC2 퍼블릭 IP 또는 DNS 주소로 변경하세요.
         EC2_HOST = '15.134.88.109'
 
+        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
+
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
@@ -105,6 +107,7 @@ pipeline {
                             export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME}"
                             export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD}"
                             export SPRING_PROFILES_ACTIVE=dev
+                            export REDIS_PASSWORD="${REDIS_PASSWORD}"
                             
                             # 3. Nginx 안전장치 (없으면 켬)
                             docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
