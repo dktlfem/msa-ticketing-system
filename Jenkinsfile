@@ -102,12 +102,13 @@ pipeline {
                             cd /home/ubuntu/app/ || exit
 
                             # 2. .env 파일 동적 생성 (Jenkins 변수를 활용하여 매번 새로 작성)
-                            export BUILD_NUMBER=${BUILD_NUMBER} 
-                            export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL}"
-                            export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME}"
-                            export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD}"
-                            export SPRING_PROFILES_ACTIVE=dev
-                            export REDIS_PASSWORD="${REDIS_PASSWORD}"
+                            # 기존 export 방식 대신 실제 파일을 만들어 docker-compose가 읽게 함.
+                            echo "BUILD_NUMBER=${BUILD_NUMBER}" > .env
+                            echo "SPRING_DATASOURCE_URL='${SPRING_DATASOURCE_URL}'" >> .env
+                            echo "SPRING_DATASOURCE_USERNAME='${SPRING_DATASOURCE_USERNAME}'" >> .env
+                            echo "SPRING_DATASOURCE_PASSWORD='${SPRING_DATASOURCE_PASSWORD}'" >> .env
+                            echo "SPRING_PROFILES_ACTIVE=dev" >> .env
+                            echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
                             
                             # 3. Nginx 안전장치 (없으면 켬)
                             docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
@@ -115,16 +116,13 @@ pipeline {
                             # 4. Docker Hub 로그인 (리눅스 변수니까 앞에 \\\$ 붙임)
                             docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
 
-                            # 5. 현재 실행 중인 포트 확인 (Blue/Green 판별)
                             CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
 
                             # 6. 다음 배포할 서비스 결정
                             if [ "\$CURRENT_PORT" = "8081" ]; then
-                                NEXT_PORT="8082"
                                 NEXT_SERVICE="app_green:8082"
                                 OLD_CONTAINER="app_blue"
                             else
-                                NEXT_PORT="8081"
                                 NEXT_SERVICE="app_blue:8081"
                                 OLD_CONTAINER="app_green"
                             fi
@@ -132,16 +130,14 @@ pipeline {
                             echo "--- Deploying to: \$NEXT_SERVICE with .env variables ---"
 
                             # 7. 새 버전 이미지 풀 및 특정 서비스만 실행
-                            # .env 파일 덕분에 별도의 -e 옵션 없이도 DB 정보가 주입됩니다.
+                            # .env 파일 덕분에 별도의 -e 옵션 없이도 DB 정보가 주입된다.
                             docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            # .env 파일이 있으면 docker-compose가 자동으로 변수를 주입합니다.
                             docker-compose up -d --no-deps \$(echo \$NEXT_SERVICE | cut -d: -f1)
 
-                            # docker-compose가 쉘의 환경변수를 읽도록 실행
-                            # docker-compose up -d --no-deps nginx_proxy \$(echo \$NEXT_SERVICE | cut -d: -f1)
-
                             # 8. Health Check 대기 (스프링 부트가 완전히 뜰 때까지)
-                            echo "--- Waiting for Spring Boot Startup (15s)... ---"
-                            sleep 15
+                            echo "--- Waiting for Spring Boot Startup (20s)... ---"
+                            sleep 20
 
                             # 9. Nginx 설정 변경 및 리로드
                             sed -i "s/server app_.*;/server \$NEXT_SERVICE;/g" nginx.conf
