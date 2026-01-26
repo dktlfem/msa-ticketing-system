@@ -18,7 +18,7 @@ pipeline {
 
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
-        SPRING_DATASOURCE_PASSWORD = 'admin1234'
+        SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
     }
 
     options {
