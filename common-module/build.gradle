@@ -1,9 +1,21 @@
 plugins {
     id 'java-library' // 공통 모듈 상단에도 명시적으로 추가해주는 것이 좋음.
+    id 'io.spring.dependency-management' // 버전 매니저 추가 (버전은 생략하여 루트 설정을 따름)
+}
+
+// 이 모듈이 라이브러리를 찾을 수 있도록 저장소를 명시함.
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.0"
+    }
 }
 
 dependencies {
-    api platform('org.springframework.boot:spring-boot-dependencies:3.4.0')
+    // 버전 사전(BOM)을 모든 스코프에 적용
     api 'org.hibernate:hibernate-community-dialects:6.5.2.Final'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
     api 'org.springframework.boot:spring-boot-starter-web'
@@ -34,9 +46,11 @@ dependencies {
     // 공통 테스트 의존성 (모든 앱으로 전파)
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'com.h2database:h2'
 }
 
+// 해당 common-module/build.gradle 이 모듈은 스스로 실행될 수 없고,
+// 다른 모듈들이 참조하는 '부품' 역할을 함.
+// -> 따라서 다른 모듈이 컴파일할 때 읽을 수 있는 일반 jar가 반드시 필요함.
 bootJar { enabled = false }
 jar { enabled = true }

@@ -1,8 +1,28 @@
+plugins {
+    // 1. 빌드 도구 정의 (상속되지 않으므로 명시 필수)
+    id 'java'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+
+    // 코틀린 컴파일 능력을 부여함.
+    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.9.22'
+}
+
 dependencies {
     implementation project(':common-module')
 
+    // 코틀린 실행에 필요한 필수 라이브러리
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+
     // DB 드라이버
     runtimeOnly 'com.mysql:mysql-connector-j'
+}
+
+// 자바 컨트롤러가 코틀린 서비스를 인식하게 하는 설정
+tasks.named('compileJava') {
+    dependsOn tasks.named('compileKotlin')
 }
 
 bootJar {
@@ -12,4 +32,9 @@ bootJar {
 
 springBoot {
     mainClass = 'com.koesc.ci_cd_test_app.WaitingRoomApplication'
+}
+
+// 일반 jar 생성을 비활성화하여 빌드 결과물을 app.jar 하나로 단일화함.
+jar {
+    enabled = false
 }

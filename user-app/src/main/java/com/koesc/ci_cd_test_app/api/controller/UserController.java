@@ -2,6 +2,7 @@ package com.koesc.ci_cd_test_app.api.controller;
 
 import com.koesc.ci_cd_test_app.api.request.UserRequestDTO;
 import com.koesc.ci_cd_test_app.api.response.UserResponseDTO;
+import com.koesc.ci_cd_test_app.business.AiModelService;
 import com.koesc.ci_cd_test_app.business.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AiModelService aiModelService;
 
     @Operation(summary = "회원 가입", description = "이메일과 이름을 통해 새로운 회원을 등록합니다.")
     @PostMapping("/signup")
@@ -27,5 +29,11 @@ public class UserController {
     @GetMapping("/{userId}")
     public UserResponseDTO getInfo(@PathVariable Long userId) {
         return userService.getInfo(userId);
+    }
+
+    @Operation(summary = "AI 모델 호출 테스트 (서킷 브레이커 지표 생성용)")
+    @GetMapping("/ai-test")
+    public String testAiCircuit() {
+        return aiModelService.fallback();
     }
 }
