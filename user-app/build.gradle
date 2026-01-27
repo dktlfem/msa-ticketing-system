@@ -21,3 +21,8 @@ bootJar {
 springBoot {
     mainClass = 'com.koesc.ci_cd_test_app.UserApplication'
 }
+
+// 일반 jar 생성을 비활성화하여 빌드 결과물을 app.jar 하나로 단일화함.
+jar {
+    enabled = false
+}

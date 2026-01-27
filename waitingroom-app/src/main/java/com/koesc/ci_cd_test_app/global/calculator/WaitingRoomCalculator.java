@@ -2,6 +2,9 @@ package com.koesc.ci_cd_test_app.global.calculator;
 
 import org.springframework.stereotype.Component;
 
+/**
+ * Calculator : 반복되는 비즈니스 계산 로직을 공용
+ */
 @Component
 public class WaitingRoomCalculator {
 
