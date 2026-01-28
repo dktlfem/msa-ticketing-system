@@ -85,14 +85,14 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     script {
                         // 1. Jenkins 서버 로컬에서 .env 파일 생성
-                        sh """
-                            echo "BUILD_NUMBER=${env.BUILD_NUMBER}" > .env
-                            echo "SPRING_DATASOURCE_URL='${env.SPRING_DATASOURCE_URL}'" >> .env
-                            echo "SPRING_DATASOURCE_USERNAME='${env.SPRING_DATASOURCE_USERNAME}'" >> .env
-                            echo "SPRING_DATASOURCE_PASSWORD='${env.SPRING_DATASOURCE_PASSWORD}'" >> .env
+                        sh '''
+                            echo "BUILD_NUMBER=${BUILD_NUMBER}" > .env
+                            echo "SPRING_DATASOURCE_URL='${SPRING_DATASOURCE_URL}'" >> .env
+                            echo "SPRING_DATASOURCE_USERNAME='${SPRING_DATASOURCE_USERNAME}'" >> .env
+                            echo "SPRING_DATASOURCE_PASSWORD='${SPRING_DATASOURCE_PASSWORD}'" >> .env
                             echo "SPRING_PROFILES_ACTIVE=dev" >> .env
-                            echo "REDIS_PASSWORD='${env.REDIS_PASSWORD}'" >> .env
-                        """
+                            echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
+                        '''
 
                         // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
                         sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
