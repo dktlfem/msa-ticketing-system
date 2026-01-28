@@ -84,47 +84,42 @@ pipeline {
                 // 1. 열쇠 꺼내기 (sshUserPrivateKey 사용)
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     script {
-                        // .env 파일 내용을 Groovy 변수로 미리 정의하여 쉘 충돌 방지
-                            def envContent = """BUILD_NUMBER=${env.BUILD_NUMBER}
+                        // 1. .env 파일 생성 로직 (가장 안전한 writeFile 방식)
+                        def envContent = """BUILD_NUMBER=${env.BUILD_NUMBER}
 SPRING_DATASOURCE_URL='${env.SPRING_DATASOURCE_URL}'
 SPRING_DATASOURCE_USERNAME='${env.SPRING_DATASOURCE_USERNAME}'
 SPRING_DATASOURCE_PASSWORD='${env.SPRING_DATASOURCE_PASSWORD}'
 SPRING_PROFILES_ACTIVE=dev
 REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
                         writeFile file: '.env', text: envContent
-                    
-                        // 파일 전송 및 원격 실행
+                        
+                        // 2. 파일 전송 (변수명을 정확히 ${}로 감싸 오타 방지)
                         sh "scp -i ${KEY_FILE} -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
 
-                    // 3. SSH로 접속하여 배포 로직만 실행 (이제 변수 주입 걱정 끝)
-                    sh """
-                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
-
+                        // 3. 원격 실행 (Heredoc 방식을 사용하여 SSH 내부의 $ 기호를 보호함)
+                        sh """
+                            ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
+                                cd /home/ubuntu/app/ || exit
+                                
+                                # 서버에 저장된 인증 정보로 로그인
+                                docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass)
+                                
+                                # 5개 이미지 최신화 및 컨테이너 실행
+                                docker-compose pull
+                                docker-compose up -d --remove-orphans
+                                
+                                # Nginx 프록시 설정 반영
+                                docker exec nginx_proxy nginx -s reload
+                                
+                                echo "--- MSA Cluster Deployment Complete (All 5 Services Up) ---"
+EOF
+                        """
+                    } 
+                } 
+            } 
+        } 
+    } 
                             
-                            # 1. 작업 디렉토리 이동
-                            cd /home/ubuntu/app/ || exit
-    
-                            # 2. 도커 허브 로그인
-                            docker login -u $(cat ~/.docker_user) -p $(cat ~/.docker_pass)
-
-                            # 3. [핵심] 5개 서비스 전체 업데이트
-                            # docker-compose.yml에 정의된 모든 이미지의 최신 버전을 가져옵니다.
-                            docker-compose pull
-
-                            # 4. 컨테이너 실행 및 정리
-                            # --remove-orphans: 설정 파일에 없는 안 쓰는 컨테이너는 자동으로 삭제합니다.
-                            docker-compose up -d --remove-orphans
-
-                            # 5. Nginx 설정 반영 (필요 시)
-                            docker exec nginx_proxy nginx -s reload
-    
-                            echo "--- MSA Cluster Deployment Complete (All 5 Services) ---"
-                    """
-                    }
-                }
-            }
-        }
-    }     
     post {
         always {
             echo 'Pipeline finished.'
