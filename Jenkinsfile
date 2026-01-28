@@ -85,15 +85,13 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     script {
                         // .env 파일 내용을 Groovy 변수로 미리 정의하여 쉘 충돌 방지
-                            def envContent = """
-                                BUILD_NUMBER=${env.BUILD_NUMBER}
-                                SPRING_DATASOURCE_URL=${env.SPRING_DATASOURCE_URL}
-                                SPRING_DATASOURCE_USERNAME=${env.SPRING_DATASOURCE_USERNAME}
-                                SPRING_DATASOURCE_PASSWORD=${env.SPRING_DATASOURCE_PASSWORD}
-                                SPRING_PROFILES_ACTIVE=dev
-                                REDIS_PASSWORD=${env.REDIS_PASSWORD}
-                            """
-                            writeFile file: '.env', text: envContent
+                            def envContent = """BUILD_NUMBER=${env.BUILD_NUMBER}
+SPRING_DATASOURCE_URL='${env.SPRING_DATASOURCE_URL}'
+SPRING_DATASOURCE_USERNAME='${env.SPRING_DATASOURCE_USERNAME}'
+SPRING_DATASOURCE_PASSWORD='${env.SPRING_DATASOURCE_PASSWORD}'
+SPRING_PROFILES_ACTIVE=dev
+REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
+                        writeFile file: '.env', text: envContent
                     
                         // 파일 전송 및 원격 실행
                         sh "scp -i ${KEY_FILE} -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
@@ -121,8 +119,8 @@ pipeline {
                             docker exec nginx_proxy nginx -s reload
     
                             echo "--- MSA Cluster Deployment Complete (All 5 Services) ---"
-                        
-                    '''
+                        '''
+                    }
                 }
             }
         }
