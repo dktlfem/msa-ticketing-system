@@ -92,14 +92,14 @@ pipeline {
                             echo "SPRING_DATASOURCE_PASSWORD='${SPRING_DATASOURCE_PASSWORD}'" >> .env
                             echo "SPRING_PROFILES_ACTIVE=dev" >> .env
                             echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
-                        '''
 
-                        // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
-                        sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
+                            // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
+                            sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
+                        '''
                     }
 
                     // 3. SSH로 접속하여 배포 로직만 실행 (이제 변수 주입 걱정 끝)
-                    sh """
+                    sh '''
                         ssh -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
 
                             
@@ -122,7 +122,7 @@ pipeline {
     
                             echo "--- MSA Cluster Deployment Complete (All 5 Services) ---"
                         '
-                    """
+                    '''
                 }
             }
         }
