@@ -13,7 +13,7 @@ pipeline {
         // 배포할 5개 마이크로서비스 리스트
         MODULES = 'user-app,waitingroom-app,concert-app,booking-app,payment-app'
 
-        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
+        REDIS_PASSWORD = 'qkqhqhqkq1w2R\$\$'
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
@@ -71,8 +71,8 @@ pipeline {
                             def jarPath = sh(script: "ls ${module}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
                             
                             // 이미지 태그에 모듈 이름을 포함시켜 구분합니다. (예: ci-cd-test:user-app-341)
-                            sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${module}-${BUILD_NUMBER} ."
-                            sh "docker push ${DOCKER_IMAGE}:${module}-${BUILD_NUMBER}"
+                            sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${env.DOCKER_IMAGE}:${module}-${env.BUILD_NUMBER} ."
+                            sh "docker push ${env.DOCKER_IMAGE}:${module}-${env.BUILD_NUMBER}"
                         }
                     }
                 }
@@ -86,21 +86,21 @@ pipeline {
                     script {
                         // 1. Jenkins 서버 로컬에서 .env 파일 생성
                         sh """
-                            echo "BUILD_NUMBER=${BUILD_NUMBER}" > .env
-                            echo "SPRING_DATASOURCE_URL='${SPRING_DATASOURCE_URL}'" >> .env
-                            echo "SPRING_DATASOURCE_USERNAME='${SPRING_DATASOURCE_USERNAME}'" >> .env
-                            echo "SPRING_DATASOURCE_PASSWORD='${SPRING_DATASOURCE_PASSWORD}'" >> .env
+                            echo "BUILD_NUMBER=${env.BUILD_NUMBER}" > .env
+                            echo "SPRING_DATASOURCE_URL='${env.SPRING_DATASOURCE_URL}'" >> .env
+                            echo "SPRING_DATASOURCE_USERNAME='${env.SPRING_DATASOURCE_USERNAME}'" >> .env
+                            echo "SPRING_DATASOURCE_PASSWORD='${env.SPRING_DATASOURCE_PASSWORD}'" >> .env
                             echo "SPRING_PROFILES_ACTIVE=dev" >> .env
-                            echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
+                            echo "REDIS_PASSWORD='${env.REDIS_PASSWORD}'" >> .env
                         """
 
                         // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
-                        sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${EC2_HOST}:/home/ubuntu/app/.env"
+                        sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
                     }
 
                     // 3. SSH로 접속하여 배포 로직만 실행 (이제 변수 주입 걱정 끝)
                     sh """
-                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} '
+                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
 
                             
                             # 1. 작업 디렉토리 이동
