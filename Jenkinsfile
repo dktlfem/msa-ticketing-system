@@ -93,7 +93,7 @@ pipeline {
                             echo "SPRING_PROFILES_ACTIVE=dev" >> .env
                             echo "REDIS_PASSWORD='${REDIS_PASSWORD}'" >> .env
 
-                            // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
+                            # 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
                             sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
                         '''
                     }
