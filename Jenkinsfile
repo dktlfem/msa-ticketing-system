@@ -13,7 +13,7 @@ pipeline {
         // 배포할 5개 마이크로서비스 리스트
         MODULES = 'user-app,waitingroom-app,concert-app,booking-app,payment-app'
 
-        REDIS_PASSWORD = 'qkqhqhqkq1w2R\$\$'
+        REDIS_PASSWORD = ''qkqhqhqkq1w2R$$'
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
