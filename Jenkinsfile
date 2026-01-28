@@ -1,14 +1,8 @@
 pipeline {
     agent any
-
-    // 1. 빌드 시 선택할 수 있는 파라미터 정의
-    parameters {
-        choice(name: 'TARGET_MODULE', 
-               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
-               description: '빌드 및 배포할 마이크로서비스 모듈을 선택하세요.')
-    }
     
-    // 환경 변수 설정 (사용자님의 Docker Hub ID와 EC2 정보로 변경해야 합니다.)
+    // 환경 변수 설정
+    // 1. 파라미터 블록을 삭제하고 environment에 MODULES 리스트를 정의
     environment {
         // 1. Docker Hub ID와 이미지 이름으로 변경하세요.
         DOCKER_IMAGE = 'dktlfem/ci-cd-test' 
@@ -16,8 +10,10 @@ pipeline {
         // 2. AWS EC2 퍼블릭 IP 또는 DNS 주소로 변경하세요.
         EC2_HOST = '15.134.88.109'
 
-        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
+        // 배포할 5개 마이크로서비스 리스트
+        MODULES = 'user-app,waitingroom-app,concert-app,booking-app,payment-app'
 
+        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
@@ -51,7 +47,7 @@ pipeline {
             }
         }
         
-        stage('Docker Build and Push') {
+        stage('Docker Build and Push All') {
             steps {
                 script {
                     // Jenkins Credentials ID를 사용하여 Docker Hub 로그인 정보를 가져옵니다.
@@ -68,23 +64,16 @@ pipeline {
                         // 3. 전체 모듈 JAR 파일 생성 (의존성 포함)
                         sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
 
-                        // 동적 경로 탐색 로직
-                        // [MSA 동적 할당] 선택한 파라미터(TARGET_MODULE)를 변수에 주입
-                        def moduleName = params.TARGET_MODULE
-                        def jarPath = sh(script: "ls ${moduleName}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
-
-                        echo "--- Detected JAR Path: ${jarPath} ---"
-                        
-                        // [디버깅] 파일 정보 출력
-                        sh "ls -l ${jarPath}"
-                
-                        // 🌟 [핵심] --build-arg를 사용하여 Dockerfile의 JAR_PATH에 동적 경로 주입
-                        // --build-arg를 사용하여 Dockerfile의 JAR_PATH에 동적 경로를 전달합니다.
-                        echo "--- Building Docker Image for ${moduleName} ---"
-                        sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
-                
-                        // 4. 생성된 이미지 푸시
-                        sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                        // 4. MODULES 리스트를 순회하며 이미지를 각각 생성하고 푸쉬함.
+                        def moduleList = env.MODULES.split(',')
+                        for (module in moduleList) {
+                            echo "--- Processing: ${module} ---"
+                            def jarPath = sh(script: "ls ${module}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
+                            
+                            // 이미지 태그에 모듈 이름을 포함시켜 구분합니다. (예: ci-cd-test:user-app-341)
+                            sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${DOCKER_IMAGE}:${module}-${BUILD_NUMBER} ."
+                            sh "docker push ${DOCKER_IMAGE}:${module}-${BUILD_NUMBER}"
+                        }
                     }
                 }
             }
@@ -108,53 +97,30 @@ pipeline {
                         // 2. 생성된 .env 파일을 EC2 서버의 앱 폴더로 전송
                         sh "scp -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${EC2_HOST}:/home/ubuntu/app/.env"
                     }
+
                     // 3. SSH로 접속하여 배포 로직만 실행 (이제 변수 주입 걱정 끝)
                     sh """
-                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@15.134.88.109 '
+                        ssh -i $KEY_FILE -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} '
 
-                            # 1. 작업 디렉토리 이동 (가장 먼저 수행)
-                            cd /home/ubuntu/app/ || exit
                             
-                            # 2. Nginx 안전장치 (없으면 켬)
-                            docker ps | grep nginx_proxy || docker-compose up -d nginx_proxy
+                            # 1. 작업 디렉토리 이동
+                            cd /home/ubuntu/app/ || exit
+    
+                            # 2. 도커 허브 로그인
+                            docker login -u $(cat ~/.docker_user) -p $(cat ~/.docker_pass)
 
-                            # 3. Docker Hub 로그인 (리눅스 변수니까 앞에 \\\$ 붙임)
-                            docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass) &&
+                            # 3. [핵심] 5개 서비스 전체 업데이트
+                            # docker-compose.yml에 정의된 모든 이미지의 최신 버전을 가져옵니다.
+                            docker-compose pull
 
-                            # 4. Blue/Green 판별
-                            CURRENT_PORT=\$(grep -oE "app_[a-z]+:([0-9]+);" nginx.conf | grep -oE "[0-9]+")
+                            # 4. 컨테이너 실행 및 정리
+                            # --remove-orphans: 설정 파일에 없는 안 쓰는 컨테이너는 자동으로 삭제합니다.
+                            docker-compose up -d --remove-orphans
 
-                            # 5. 다음 배포할 서비스 결정
-                            if [ "\$CURRENT_PORT" = "8081" ]; then
-                                NEXT_SERVICE="app_green:8082"
-                                OLD_CONTAINER="app_blue"
-                            else
-                                NEXT_SERVICE="app_blue:8081"
-                                OLD_CONTAINER="app_green"
-                            fi
-
-                            echo "--- Deploying to: \$NEXT_SERVICE with .env variables ---"
-
-                            # 6. 새 버전 이미지 풀 및 특정 서비스만 실행
-                            # .env 파일 덕분에 별도의 -e 옵션 없이도 DB 정보가 주입된다.
-                            docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
-
-                            # .env 파일이 이미 폴더에 있으므로 docker-compose가 자동으로 읽는다.
-                            docker-compose up -d --no-deps \$(echo \$NEXT_SERVICE | cut -d: -f1)
-
-                            # 7. Health Check 대기 (스프링 부트가 완전히 뜰 때까지)
-                            echo "--- Waiting for Spring Boot Startup (20s)... ---"
-                            sleep 20
-
-                            # 8. Nginx 설정 변경 및 리로드
-                            sed -i "s/server app_.*;/server \$NEXT_SERVICE;/g" nginx.conf
+                            # 5. Nginx 설정 반영 (필요 시)
                             docker exec nginx_proxy nginx -s reload
-                            echo "--- Traffic Switched to \$NEXT_SERVICE ---"
-
-                            # 9. 구 버전(Old) 컨테이너 정리
-                            docker-compose stop \$OLD_CONTAINER
-                            docker-compose rm -f \$OLD_CONTAINER
-                            echo "--- Cleanup Complete: \$OLD_CONTAINER ---"
+    
+                            echo "--- MSA Cluster Deployment Complete (All 5 Services) ---"
                         '
                     """
                 }
