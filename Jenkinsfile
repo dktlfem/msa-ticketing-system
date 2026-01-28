@@ -97,7 +97,7 @@ REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
                         sh "scp -i ${KEY_FILE} -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
 
                     // 3. SSH로 접속하여 배포 로직만 실행 (이제 변수 주입 걱정 끝)
-                    sh '''
+                    sh """
                         ssh -i $KEY_FILE -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
 
                             
@@ -119,7 +119,7 @@ REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
                             docker exec nginx_proxy nginx -s reload
     
                             echo "--- MSA Cluster Deployment Complete (All 5 Services) ---"
-                        '''
+                    """
                     }
                 }
             }
