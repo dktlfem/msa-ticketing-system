@@ -70,7 +70,7 @@ pipeline {
                         def jarPath = sh(script: "ls ${params.TARGET_MODULE}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
                         sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${env.DOCKER_IMAGE}:${params.TARGET_MODULE}-${env.BUILD_NUMBER} ."
                         sh "docker push ${env.DOCKER_IMAGE}:${params.TARGET_MODULE}-${env.BUILD_NUMBER}"
-                        }
+                        
                     }
                 }
             }
