@@ -1,18 +1,18 @@
 pipeline {
     agent any
+
+    parameters {
+        choice(name: 'TARGET_MODULE', 
+               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
+               description: '배포할 모듈을 선택하세요.')
+    }
     
     // 환경 변수 설정
     // 1. 파라미터 블록을 삭제하고 environment에 MODULES 리스트를 정의
     environment {
-        // 1. Docker Hub ID와 이미지 이름으로 변경하세요.
         DOCKER_IMAGE = 'dktlfem/ci-cd-test' 
         EC2_USER = 'ubuntu'
-        // 2. AWS EC2 퍼블릭 IP 또는 DNS 주소로 변경하세요.
         EC2_HOST = '15.134.88.109'
-
-        // 배포할 5개 마이크로서비스 리스트
-        MODULES = 'user-app,waitingroom-app,concert-app,booking-app,payment-app'
-
         REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
         SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
@@ -24,6 +24,7 @@ pipeline {
         skipDefaultCheckout() // 기본 checkout 로직 비활성화
     }
 
+    // Git 초기 설정단계
     stages {
         stage('Initialize') {
             steps {
@@ -36,6 +37,7 @@ pipeline {
             }
         }
 
+        // 도커 클라이언트 설치 단계
         stage('Install Docker Client') {
             steps {
                 sh '''
@@ -47,10 +49,10 @@ pipeline {
             }
         }
         
-        stage('Docker Build and Push All') {
+        // 선택한 모듈만 정밀 빌드
+        stage('Docker Build and Push') {
             steps {
                 script {
-                    // Jenkins Credentials ID를 사용하여 Docker Hub 로그인 정보를 가져옵니다.
                     withCredentials([usernamePassword(credentialsId: 'dktlfem', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                         
                         // 1. Docker Hub 로그인 (보안 구문 사용)
@@ -61,18 +63,13 @@ pipeline {
                         sh 'dos2unix ./gradlew'
                         sh 'chmod +x ./gradlew'
                 
-                        // 3. 전체 모듈 JAR 파일 생성 (의존성 포함)
-                        sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies' 
+                        // 3. 선택한 모듈만 JAR 파일 생성하여 정밀 빌드 (의존성 포함)
+                        //sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies'
+                        sh "./gradlew :${params.TARGET_MODULE}:clean :${params.TARGET_MODULE}:build -x test" 
 
-                        // 4. MODULES 리스트를 순회하며 이미지를 각각 생성하고 푸쉬함.
-                        def moduleList = env.MODULES.split(',')
-                        for (module in moduleList) {
-                            echo "--- Processing: ${module} ---"
-                            def jarPath = sh(script: "ls ${module}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
-                            
-                            // 이미지 태그에 모듈 이름을 포함시켜 구분합니다. (예: ci-cd-test:user-app-341)
-                            sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${env.DOCKER_IMAGE}:${module}-${env.BUILD_NUMBER} ."
-                            sh "docker push ${env.DOCKER_IMAGE}:${module}-${env.BUILD_NUMBER}"
+                        def jarPath = sh(script: "ls ${params.TARGET_MODULE}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
+                        sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${env.DOCKER_IMAGE}:${params.TARGET_MODULE}-${env.BUILD_NUMBER} ."
+                        sh "docker push ${env.DOCKER_IMAGE}:${params.TARGET_MODULE}-${env.BUILD_NUMBER}"
                         }
                     }
                 }
@@ -100,18 +97,36 @@ REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
                         sh """
                             ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
                                 cd /home/ubuntu/app/ || exit
+                                MODULE="${params.TARGET_MODULE}"
+                                MODULE_SHORT=\${MODULE%-app}
+
+                                CURRENT_PORT=\$(grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -oE "[0-9]+" | head -n 1)
                                 
-                                # 서버에 저장된 인증 정보로 로그인
+                                if [ "\$MODULE_SHORT" = "user" ]; then B=8081; G=8082;
+                                elif [ "\$MODULE_SHORT" = "waitingroom" ]; then B=8085; G=8086;
+                                elif [ "\$MODULE_SHORT" = "concert" ]; then B=8087; G=8088;
+                                elif [ "\$MODULE_SHORT" = "booking" ]; then B=8089; G=8090;
+                                else B=8091; G=8092; fi
+
+                                if [ "\$CURRENT_PORT" = "\$B" ]; then 
+                                    NEXT_SERVICE="\${MODULE_SHORT}-green:\$G"; OLD_SLOT="\${MODULE_SHORT}-blue";
+                                else 
+                                    NEXT_SERVICE="\${MODULE_SHORT}-blue:\$B"; OLD_SLOT="\${MODULE_SHORT}-green";
+                                fi
+
                                 docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass)
+                                docker-compose pull \${NEXT_SERVICE%:*}
+                                docker-compose up -d --no-deps \${NEXT_SERVICE%:*}
                                 
-                                # 5개 이미지 최신화 및 컨테이너 실행
-                                docker-compose pull
-                                docker-compose up -d --remove-orphans
-                                
-                                # Nginx 프록시 설정 반영
+                                echo "--- Waiting for Spring Boot Startup (20s) ---"
+                                sleep 20
+
+                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE;/" nginx.conf
                                 docker exec nginx_proxy nginx -s reload
                                 
-                                echo "--- MSA Cluster Deployment Complete (All 5 Services Up) ---"
+                                # 이전 컨테이너 정리 (리소스 확보)
+                                docker-compose stop \$OLD_SLOT
+                                echo "--- MSA Cluster Deploy Success: \$NEXT_SERVICE ---"
 EOF
                         """
                     } 
