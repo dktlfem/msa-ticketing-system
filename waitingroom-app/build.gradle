@@ -10,7 +10,24 @@ plugins {
 }
 
 dependencies {
-    implementation project(':common-module')
+    implementation(project(':common-module')) {
+        // 모든 전이되는 MVC 관련 의존성을 강제로 배제합니다.
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+        exclude group: 'org.apache.tomcat.embed', module: 'tomcat-embed-core'
+    }
+
+    // WebFlux 도입 (Netty 엔진 사용)
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Reactive Redis (비동기 레디스 통신)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
+    // Kotlin Coroutines (비동기 효율 극대화)
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-reactor"
+
+    // WebFlux 전용 Swagger (OpenAPI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.2.0'
 
     // 코틀린 실행에 필요한 필수 라이브러리
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
