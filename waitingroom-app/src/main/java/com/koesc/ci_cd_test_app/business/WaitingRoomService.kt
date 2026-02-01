@@ -60,25 +60,25 @@ class WaitingRoomService(
                     )
                 }
 
-                // 2. Rate Limiter 체크
-                if (!waitingRoomRateLimiter.isAllowedToEnter(eventId)) {
-                    return@flatMap Mono.just(
-                        WaitingRoomResponseDTO.waiting(currentRank, waitingRoomCalculator.calculate(currentRank))
-                    )
-                }
-
-                // 3. 관문 통과: JPA(DB) 작업은 별도 스레드(boundedElastic)에서 실행하여 Netty 보호
-                // WaitingToken 발급 및 반환 로직
-                Mono.fromCallable {
-                    waitingRoomValidator.validateIssueToken(eventId)
-                    waitingRoomManager.createToken(eventId, userId)
-                }.subscribeOn(Schedulers.boundedElastic())
-                    .flatMap { token ->
-                        waitingRoomWriter.removeFromQueue(eventId, userId)
-                            .thenReturn(WaitingRoomResponseDTO.allowed(token))
+                // 2. Rate Limiter 체크 (Mono<Boolean>을 flatMap으로 연결)
+                waitingRoomRateLimiter.isAllowedToEnter(eventId)
+                    .flatMap { isAllowed ->
+                        if (!isAllowed) {
+                            // 허용되지 않은 경우 대기 응답 반환
+                            Mono.just(WaitingRoomResponseDTO.waiting(currentRank, waitingRoomCalculator.calculate(currentRank)))
+                        } else {
+                            // 3. 관문 통과: JPA(DB) 작업은 별도 스레드(boundedElastic)에서 실행하여 Netty 보호
+                            Mono.fromCallable {
+                                waitingRoomValidator.validateIssueToken(eventId)
+                                waitingRoomManager.createToken(eventId, userId)
+                            }.subscribeOn(Schedulers.boundedElastic())
+                                .flatMap { token ->
+                                    waitingRoomWriter.removeFromQueue(eventId, userId)
+                                        .thenReturn(WaitingRoomResponseDTO.allowed(token))
+                                }
+                        }
                     }
             }
-
             // 4. [NPE 방어] 대기열에 정보가 없으면(Empty) 신규 진입 시도
             .switchIfEmpty(
                 Mono.defer {
