@@ -4,8 +4,9 @@ import com.koesc.ci_cd_test_app.domain.WaitingToken;
 import com.koesc.ci_cd_test_app.implement.mapper.WaitingRoomMapper;
 import com.koesc.ci_cd_test_app.storage.repository.WaitingTokenRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
@@ -13,7 +14,8 @@ public class WaitingRoomReader {
 
     private final WaitingTokenRepository waitingTokenRepository;
     private final WaitingRoomMapper waitingRoomMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
+    // 기존 RedisTemplate -> ReactiveRedisTemplate으로 교체
+    private final ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
 
     /**
      * [잠재적 병목 포인트 & 해결 전략]
@@ -34,8 +36,19 @@ public class WaitingRoomReader {
                 .orElse(null);
     }
 
-    public Long getRank(Long eventId, Long userId) {
+    /**
+     * public Long getRank(Long eventId, Long userId) {
+     * String key = "waiting-room:event:" + eventId;
+     * return reactiveRedisTemplate.opsForZSet().rank(key, userId.toString());
+     * }
+     */
+
+    // Long -> Mono<Long>으로 변경
+    // Non-blocking I/O: 리액티브 서버(Netty)는 데이터가 올 때까지 스레드를 비워두고 기다린다.
+    // Mono는 지금 당장 값이 없지만, 작업이 끝나면 이 바구니에 담아둘게라는 비동기 약속임.
+    public Mono<Long> getRank(Long eventId, Long userId) {
         String key = "waiting-room:event:" + eventId;
-        return redisTemplate.opsForZSet().rank(key, userId.toString());
+        return reactiveRedisTemplate.opsForZSet()
+                .rank(key, userId.toString());
     }
 }

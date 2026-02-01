@@ -1,6 +1,10 @@
 dependencies {
     implementation project(':common-module')
 
+    // 기존 MVC(Tomcat) 스택을 그대로 사용함
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0' // MVC 전용 Swagger
 
     // DB 드라이버
     runtimeOnly 'com.mysql:mysql-connector-j'

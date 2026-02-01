@@ -1,7 +1,6 @@
 package com.koesc.ci_cd_test_app.business
 
 import com.koesc.ci_cd_test_app.api.response.WaitingRoomResponseDTO
-import com.koesc.ci_cd_test_app.domain.WaitingToken
 import com.koesc.ci_cd_test_app.global.calculator.WaitingRoomCalculator
 import com.koesc.ci_cd_test_app.implement.manager.WaitingRoomManager
 import com.koesc.ci_cd_test_app.implement.manager.WaitingRoomRateLimiter
@@ -9,6 +8,8 @@ import com.koesc.ci_cd_test_app.implement.reader.WaitingRoomReader
 import com.koesc.ci_cd_test_app.implement.validator.WaitingRoomValidator
 import com.koesc.ci_cd_test_app.implement.writer.WaitingRoomWriter
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 
 @Service
 class WaitingRoomService(
@@ -27,16 +28,17 @@ class WaitingRoomService(
      * 2. Writer를 통해 Redis(ZSET)에 유저 추가
      * 3. 현재 유저의 순번(Rank) 조회 후 반환
      */
-    fun joinQueue(eventId: Long, userId: Long): Long {
+    fun joinQueue(eventId: Long, userId: Long): Mono<Long> {
+        // 동기 검증 로직은 필요 시 Mono.fromCallable 등으로 감싸서 실행 가능
         waitingRoomValidator.validateJoinRequest(eventId, userId)
         waitingRoomValidator.validateDuplicateAccess(eventId, userId)
 
         // Redis 진입 (ZADD)
-        waitingRoomWriter.addToToken(eventId, userId)
-
         // 현재 순번 리턴 (Nullable 처리 후 + 1)
-        val rank = waitingRoomReader.getRank(eventId, userId) ?: 0L
-        return rank + 1
+        return waitingRoomWriter.addToToken(eventId, userId)
+            .then(waitingRoomReader.getRank(eventId, userId))
+            .map { it + 1 }
+            .defaultIfEmpty(1L) // 값이 비어있다면 1번으로 진입
     }
 
     /**
@@ -45,47 +47,46 @@ class WaitingRoomService(
      * 2. 순번이 임계치(MAX_ENTRY_RANK)보다 크면 즉시 대기 응답 (Early Exit)
      * 3. 순번이 통과 범위라면, 그때서야 DB에 Active 토큰 생성/조회 (Write/Read)
      */
-    fun getQueueStatus(eventId: Long, userId: Long): WaitingRoomResponseDTO {
+    fun getQueueStatus(eventId: Long, userId: Long): Mono<WaitingRoomResponseDTO> {
 
-        // Redis에서 순번 확인 (Long? 타입으로 변환됨)
-        val rank = waitingRoomReader.getRank(eventId, userId)
+        return waitingRoomReader.getRank(eventId, userId)
+            .flatMap { rank ->
+                val currentRank = rank + 1
 
-        // 1. 대기열에 없으면 신규 진입 (멱등성 보장)
-        /*if (rank == null) { // 1-1. rank가 null인 것을 확인했음.
-            Long newRank = joinQueue(eventId, userId);
+                // 1. Early Exit: 순번이 100위 밖이면 즉시 대기 응답 (Smart Cast 적용)
+                if (rank > 100) {
+                    return@flatMap Mono.just(
+                        WaitingRoomResponseDTO.waiting(currentRank, waitingRoomCalculator.calculate(currentRank))
+                    )
+                }
 
-            // 1-2. 아래 rank + 1에서 반드시 NullPointException이 발생함.
-            // 원인 : rank가 null일 때 진입하는 블록 안에서 rank + 1 연산을 수행하고 있음.
-            // TODO 해결책 : 신규 진입 시에는 newRank를 기준으로 계산하거나, 기본값을 사용하도록 방어 코드를 구축해야함.
-            return WaitingRoomResponseDTO.waiting(newRank, waitingRoomCalculator.calculate(rank + 1));
-        }*/
+                // 2. Rate Limiter 체크
+                if (!waitingRoomRateLimiter.isAllowedToEnter(eventId)) {
+                    return@flatMap Mono.just(
+                        WaitingRoomResponseDTO.waiting(currentRank, waitingRoomCalculator.calculate(currentRank))
+                    )
+                }
 
-        // 1. 대기열에 없으면 신규 진입 (멱등성 보장)
-        if (rank == null) {
-            val newRank = joinQueue(eventId, userId)
+                // 3. 관문 통과: JPA(DB) 작업은 별도 스레드(boundedElastic)에서 실행하여 Netty 보호
+                // WaitingToken 발급 및 반환 로직
+                Mono.fromCallable {
+                    waitingRoomValidator.validateIssueToken(eventId)
+                    waitingRoomManager.createToken(eventId, userId)
+                }.subscribeOn(Schedulers.boundedElastic())
+                    .flatMap { token ->
+                        waitingRoomWriter.removeFromQueue(eventId, userId)
+                            .thenReturn(WaitingRoomResponseDTO.allowed(token))
+                    }
+            }
 
-            // [NPE 해결] rank 대신 새로 생성된 newRank를 사용하여 계산
-            // TODO 해결책: 1. Optional<>으로 Nullable 처리, 2. Kotlin의 Null Safety
-            return WaitingRoomResponseDTO.waiting(newRank, waitingRoomCalculator.calculate(newRank))
-        }
-
-        // 2. Early Exit: 순번이 100위 밖이면 즉시 대기 응답 (Smart Cast 적용)
-        if (rank >= 100) {
-            return WaitingRoomResponseDTO.waiting(rank + 1, waitingRoomCalculator.calculate(rank + 1))
-        }
-
-        // 3. Rate Limiter: 초당 입장 인원 제한 체크
-        if (!waitingRoomRateLimiter.isAllowedToEnter(eventId)) {
-            return WaitingRoomResponseDTO.waiting(rank + 1, waitingRoomCalculator.calculate(rank + 1))
-        }
-
-        // 4. 관문 통과: 매진 확인 후 토큰 발급
-        waitingRoomValidator.validateIssueToken(eventId)
-        val token: WaitingToken = waitingRoomManager.createToken(eventId, userId)
-
-        // 발급 성공시 Redis 대기열에서 삭제
-        waitingRoomWriter.removeFromQueue(eventId, userId)
-
-        return WaitingRoomResponseDTO.allowed(token)
+            // 4. [NPE 방어] 대기열에 정보가 없으면(Empty) 신규 진입 시도
+            .switchIfEmpty(
+                Mono.defer {
+                    joinQueue(eventId, userId)
+                        .map { newRank ->
+                            WaitingRoomResponseDTO.waiting(newRank, waitingRoomCalculator.calculate(newRank))
+                        }
+                }
+            )
     }
 }
