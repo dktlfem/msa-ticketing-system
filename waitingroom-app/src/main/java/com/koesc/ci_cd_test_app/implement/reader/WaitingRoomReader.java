@@ -15,7 +15,7 @@ public class WaitingRoomReader {
     private final WaitingTokenRepository waitingTokenRepository;
     private final WaitingRoomMapper waitingRoomMapper;
     // 기존 RedisTemplate -> ReactiveRedisTemplate으로 교체
-    private final ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
 
     /**
      * [잠재적 병목 포인트 & 해결 전략]

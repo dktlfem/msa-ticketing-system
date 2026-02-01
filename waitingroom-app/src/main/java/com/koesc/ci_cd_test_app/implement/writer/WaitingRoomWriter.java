@@ -18,7 +18,7 @@ public class WaitingRoomWriter {
     private final WaitingTokenRepository waitingTokenRepository;
     private final WaitingRoomMapper waitingRoomMapper;
     // 기존 RedisTemplate -> ReactiveRedisTemplate으로 교체
-    private final ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
 
     /**
      * 토큰 발급 및 저장
