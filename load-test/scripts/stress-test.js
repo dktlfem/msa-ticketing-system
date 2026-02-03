@@ -11,7 +11,7 @@ export const options = {
     ],
     thresholds: {
         http_req_failed: ['rate<0.1'], // 스트레스 상황에서도 실패율 10% 미만 유지 목표
-        http_req_duration: ['p(99)<5000'], // 최악의 경우에도 1초 이내 응답
+        http_req_duration: ['p(99)<5000'], // 최악의 경우에도 5초 이내 응답
     },
 };
 
