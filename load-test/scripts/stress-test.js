@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-const BASE_URL = __ENV.BASE_URL || 'http://192.168.219.102:8085';
+const BASE_URL = __ENV.BASE_URL || 'http://15.134.88.109';
 
 export const options = {
     stages: [

@@ -34,16 +34,16 @@ public class SecurityConfig {
 
                 // 3. Webflux는 기본적으로 세션을 사용하지 않는 Stateless 방식임
                 .authorizeExchange(exchanges -> exchanges // 4. authorizeHttpRequests 대신 authorizeExchange 사용 (서버와 클라이언트 간의 데이터 교환)
-                        .pathMatchers(
+                        /*.pathMatchers(
                                 "/api/v1/waiting-room/**",
                                 "/api/v1/**",
                                 "/error",
                                 "/actuator/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
-                        ).permitAll()
+                        ).permitAll()*/
                         // 그 외 모든 요청은 인증 필요
-                        .anyExchange().authenticated()
+                        .anyExchange().permitAll() // k6 부하테스트 기간 동안 모든 요청 허용
                 )
                 // 6. 폼 로그인 및 기본 인증 비활성화 (401 Unauthorized realm="Realm" 방지)
                 .formLogin(form -> form.disable())
