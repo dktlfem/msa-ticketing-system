@@ -29,6 +29,11 @@ dependencies {
     // WebFlux 전용 Swagger (OpenAPI)
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.2.0'
 
+    // Resilience4j Spring Boot & WebFlux
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-reactor' // WebFlux 연동용
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
     // 코틀린 실행에 필요한 필수 라이브러리
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
