@@ -7,6 +7,9 @@ import com.koesc.ci_cd_test_app.implement.manager.WaitingRoomRateLimiter
 import com.koesc.ci_cd_test_app.implement.reader.WaitingRoomReader
 import com.koesc.ci_cd_test_app.implement.validator.WaitingRoomValidator
 import com.koesc.ci_cd_test_app.implement.writer.WaitingRoomWriter
+import io.github.resilience4j.bulkhead.annotation.Bulkhead
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
@@ -22,12 +25,16 @@ class WaitingRoomService(
         private val waitingRoomCalculator: WaitingRoomCalculator
 ) {
 
+    private val log = LoggerFactory.getLogger(WaitingRoomService::class.java)
+
     /**
-     * [Flow] 대기열 진입
+     * [Flow] 대기열 진입 (서킷 브레이커 + 벌크헤드 적용)
      * 1. 검증기(Validator)를 통한 유효성 체크
      * 2. Writer를 통해 Redis(ZSET)에 유저 추가
      * 3. 현재 유저의 순번(Rank) 조회 후 반환
      */
+    @CircuitBreaker(name = "waitingRoomService", fallbackMethod = "joinQueueFallback")
+    @Bulkhead(name = "waitingRoomService", fallbackMethod = "joinQueueFallback")
     fun joinQueue(eventId: Long, userId: Long): Mono<Long> {
         // 동기 검증 로직은 필요 시 Mono.fromCallable 등으로 감싸서 실행 가능
         waitingRoomValidator.validateJoinRequest(eventId, userId)
@@ -41,12 +48,19 @@ class WaitingRoomService(
             .defaultIfEmpty(1L) // 값이 비어있다면 1번으로 진입
     }
 
+    // joinQueue 장애 발생 시 Fallback (순번 -1 반환)
+    fun joinQueueFallback(eventId: Long, userId: Long, t: Throwable): Mono<Long> {
+        log.warn("대기열 진입 Fallback 발동! 원인: {t.message}")
+        return Mono.just(-1L)
+    }
+
     /**
-     * [Flow] 상태 조회 및 토큰 전환 (핵심 병목 방어 로직)
+     * [Flow] 상태 조회 및 토큰 전환 (핵심 병목 방어 로직) (서킷 브레이커 적용)
      * 1. Redis에서 현재 순번 조회 (DB 접근 x)
      * 2. 순번이 임계치(MAX_ENTRY_RANK)보다 크면 즉시 대기 응답 (Early Exit)
      * 3. 순번이 통과 범위라면, 그때서야 DB에 Active 토큰 생성/조회 (Write/Read)
      */
+    @CircuitBreaker(name = "waitingRoomService", fallbackMethod = "getQueueStatusFallback")
     fun getQueueStatus(eventId: Long, userId: Long): Mono<WaitingRoomResponseDTO> {
 
         return waitingRoomReader.getRank(eventId, userId)
@@ -88,5 +102,12 @@ class WaitingRoomService(
                         }
                 }
             )
+    }
+
+    // getQueueStatusFallback 장애 발생 시 Fallback
+    fun getQueueStatusFallback(eventId: Long, userId: Long, t: Throwable): Mono<WaitingRoomResponseDTO> {
+        log.warn("상태 조회 Fallback 발동! 원인: ${t.message}")
+        // 사용자에게 현재 시스템이 지연 중임을 알리는 특별한 상태값 반환
+        return Mono.just(WaitingRoomResponseDTO.waiting(-1L, 0))
     }
 }
