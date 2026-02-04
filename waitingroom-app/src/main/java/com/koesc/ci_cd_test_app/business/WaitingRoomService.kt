@@ -50,7 +50,7 @@ class WaitingRoomService(
 
     // joinQueue 장애 발생 시 Fallback (순번 -1 반환)
     fun joinQueueFallback(eventId: Long, userId: Long, t: Throwable): Mono<Long> {
-        log.warn("대기열 진입 Fallback 발동! 원인: {t.message}")
+        log.warn("대기열 진입 Fallback 발동! 원인: ${t.message}")
         return Mono.just(-1L)
     }
 
