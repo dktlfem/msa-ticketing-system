@@ -34,7 +34,7 @@ public class SeatService {
      * Holder에서 트랜잭션 단위 처리
      */
     public SeatResponseDTO holdSeat(SeatRequestDTO request) {
-        log.info("[SeatService] Attempting to hold seatId: {} for scheduleId: {}", request.seatId(), request.scheduleId());
+        log.info("[SeatService] Attempting to hold seatId: {}", request.seatId());
 
         // Manager를 통한 비즈니스 로직 조립 수행
         Seat heldSeat = seatManager.holdSeat(request.seatId());
