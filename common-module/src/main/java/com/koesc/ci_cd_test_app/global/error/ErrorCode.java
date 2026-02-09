@@ -10,6 +10,7 @@ public enum ErrorCode {
 
     // 공통
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "적절하지 않은 입력 값입니다."),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C999", "Internal Server Error"),
 
     // 공연(Event) 관련
     EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "E001", "존재하지 않는 공연입니다."),
@@ -18,7 +19,12 @@ public enum ErrorCode {
     EVENT_SOLD_OUT(HttpStatus.CONFLICT, "E004", "모든 좌석이 매진되었습니다."),
 
     // 대기열(WaitingRoom) 관련
-    ALREADY_HAS_TOKEN(HttpStatus.CONFLICT, "W001", "이미 유효한 입장 토큰을 보유하고 있습니다.");
+    ALREADY_HAS_TOKEN(HttpStatus.CONFLICT, "W001", "이미 유효한 입장 토큰을 보유하고 있습니다."),
+
+    // 낙관적 락(OptimisticLock)
+    SEAT_ALREADY_HELD(HttpStatus.CONFLICT, "S001", "다른 사용자가 먼저 좌석을 선택했습니다."),
+    SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "S002", "존재하지 않는 좌석입니다.");
+
 
     private final HttpStatus httpStatus;
     private final String code;
