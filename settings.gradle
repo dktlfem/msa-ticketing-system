@@ -8,12 +8,13 @@ pluginManagement {
 // 루트 프로젝트 이름
 rootProject.name = 'ci-cd-test'
 
-// 5개의 마이크로서비스 모듈 추가
+// 6개의 마이크로서비스 모듈 추가
 include 'user-app'
 include 'waitingroom-app'
 include 'concert-app'
 include 'booking-app'
 include 'payment-app'
+include 'scg-app'
 
 // 공통 모듈 (엔터티, 공통 유틸리티 등)
 include 'common-module'

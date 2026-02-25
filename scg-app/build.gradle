@@ -1,0 +1,44 @@
+ext {
+    set('springCloudVersion', "2024.0.0")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+dependencies {
+    /**
+     * Spring Cloud Gateway는 앞으로도 DB 관련된 설정이 절대 들어가면 안 됨.
+     * 그래서 scg-app 모듈에는 아래 같은 설정이 절대 필요 없음.
+     *
+     * - spring.datasource.*
+     * - spring.jpa.*
+     * - mysql driver runtimeOnly
+     */
+
+    // 게이트웨이(라우팅)
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+
+    // 헬스/메트릭(모니터링)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    // 추후 트레이싱 하고 싶으면 추가
+    // implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+}
+
+bootJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'app.jar'
+}
+
+springBoot {
+    mainClass = 'com.koesc.ci_cd_test_app.ScgApplication'
+}
+
+// 일반 jar 생성을 비활성화하여 빌드 결과물을 app.jar 하나로 단일화함.
+jar {
+    enabled = false
+}
