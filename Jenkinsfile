@@ -3,7 +3,7 @@ pipeline {
 
     parameters {
         choice(name: 'TARGET_MODULE', 
-               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
+               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app', 'scg-app'], 
                description: '배포할 모듈을 선택하세요.')
     }
     
@@ -17,6 +17,9 @@ pipeline {
         SPRING_DATASOURCE_URL = 'jdbc:mysql://dev-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
+        SPRING_DATA_REDIS_HOST = '192.168.124.101'
+        SPRING_DATA_REDIS_PORT = '6379'
+        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
     }
 
     options {
