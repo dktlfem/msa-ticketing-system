@@ -14,7 +14,7 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.107.233.84'
         REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
-        SPRING_DATASOURCE_URL = 'jdbc:mysql://cd-mysql-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
+        SPRING_DATASOURCE_URL = 'jdbc:mysql://dev-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
     }
