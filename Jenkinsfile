@@ -3,7 +3,7 @@ pipeline {
 
     parameters {
         choice(name: 'TARGET_MODULE', 
-               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app', 'scg-app'], 
+               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
                description: '배포할 모듈을 선택하세요.')
     }
     
@@ -13,10 +13,11 @@ pipeline {
         DOCKER_IMAGE = 'dktlfem/ci-cd-test' 
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.107.233.84'
-        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
+        
         SPRING_DATASOURCE_URL = 'jdbc:mysql://dev-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
         SPRING_DATASOURCE_USERNAME = 'admin'
         SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
+
         SPRING_DATA_REDIS_HOST = '192.168.124.101'
         SPRING_DATA_REDIS_PORT = '6379'
         REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
@@ -81,62 +82,94 @@ pipeline {
         
         stage('Deploy to AWS EC2') {
             steps {
-                // 1. 열쇠 꺼내기 (sshUserPrivateKey 사용)
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     script {
-                        // 1. .env 파일 생성 로직 (가장 안전한 writeFile 방식)
                         def envContent = """BUILD_NUMBER=${env.BUILD_NUMBER}
+SPRING_PROFILES_ACTIVE=dev
 SPRING_DATASOURCE_URL='${env.SPRING_DATASOURCE_URL}'
 SPRING_DATASOURCE_USERNAME='${env.SPRING_DATASOURCE_USERNAME}'
 SPRING_DATASOURCE_PASSWORD='${env.SPRING_DATASOURCE_PASSWORD}'
-SPRING_PROFILES_ACTIVE=dev
-REDIS_PASSWORD='${env.REDIS_PASSWORD}'"""
+SPRING_DATA_REDIS_HOST='${env.SPRING_DATA_REDIS_HOST}'
+SPRING_DATA_REDIS_PORT='${env.SPRING_DATA_REDIS_PORT}'
+SPRING_DATA_REDIS_PASSWORD='${env.REDIS_PASSWORD}'
+SPRING_REDIS_PASSWORD='${env.REDIS_PASSWORD}'
+"""
                         writeFile file: '.env', text: envContent
-                        
-                        // 2. 파일 전송 (변수명을 정확히 ${}로 감싸 오타 방지)
-                        sh "scp -i ${KEY_FILE} -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env"
 
-                        // 3. 원격 실행 (Heredoc 방식을 사용하여 SSH 내부의 $ 기호를 보호함)
+                        sh """
+                            scp -i ${KEY_FILE} -o StrictHostKeyChecking=no .env ubuntu@${env.EC2_HOST}:/home/ubuntu/app/.env
+                            scp -i ${KEY_FILE} -o StrictHostKeyChecking=no docker-compose.yml ubuntu@${env.EC2_HOST}:/home/ubuntu/app/docker-compose.yml
+                            scp -i ${KEY_FILE} -o StrictHostKeyChecking=no nginx.conf ubuntu@${env.EC2_HOST}:/home/ubuntu/app/nginx.conf
+                        """
+
                         sh """
                             ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
-                                cd /home/ubuntu/app/ || exit
+                                set -e
+                                cd /home/ubuntu/app || exit 1
+
+                                if docker compose version >/dev/null 2>&1; then
+                                    DC="docker compose"
+                                else
+                                    DC="docker-compose"
+                                fi
+
                                 MODULE="${params.TARGET_MODULE}"
                                 MODULE_SHORT=\${MODULE%-app}
 
-                                CURRENT_PORT=\$(grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -oE "[0-9]+" | head -n 1)
-                                
-                                if [ "\$MODULE_SHORT" = "user" ]; then B=8081; G=8082;
-                                elif [ "\$MODULE_SHORT" = "waitingroom" ]; then B=8085; G=8086;
-                                elif [ "\$MODULE_SHORT" = "concert" ]; then B=8087; G=8088;
-                                elif [ "\$MODULE_SHORT" = "booking" ]; then B=8089; G=8090;
-                                else B=8091; G=8092; fi
-
-                                if [ "\$CURRENT_PORT" = "\$B" ]; then 
-                                    NEXT_SERVICE="\${MODULE_SHORT}-green:\$G"; OLD_SLOT="\${MODULE_SHORT}-blue";
-                                else 
-                                    NEXT_SERVICE="\${MODULE_SHORT}-blue:\$B"; OLD_SLOT="\${MODULE_SHORT}-green";
+                                if [ "\$MODULE_SHORT" = "user" ]; then
+                                    B=8081; G=8082
+                                elif [ "\$MODULE_SHORT" = "waitingroom" ]; then
+                                    B=8085; G=8086
+                                elif [ "\$MODULE_SHORT" = "concert" ]; then
+                                    B=8087; G=8088
+                                elif [ "\$MODULE_SHORT" = "booking" ]; then
+                                    B=8089; G=8090
+                                elif [ "\$MODULE_SHORT" = "payment" ]; then
+                                    B=8091; G=8092
+                                else
+                                    echo "Unsupported module: \$MODULE"
+                                    exit 1
                                 fi
 
-                                docker login -u \$(cat ~/.docker_user) -p \$(cat ~/.docker_pass)
-                                docker-compose pull \${NEXT_SERVICE%:*}
-                                docker-compose up -d --no-deps \${NEXT_SERVICE%:*}
-                                
-                                echo "--- Waiting for Spring Boot Startup (20s) ---"
+                                if grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -q "server .*:\${B};"; then
+                                    NEXT_SERVICE="\${MODULE_SHORT}-green"
+                                    NEXT_PORT="\${G}"
+                                    OLD_SLOT="\${MODULE_SHORT}-blue"
+                                else
+                                    NEXT_SERVICE="\${MODULE_SHORT}-blue"
+                                    NEXT_PORT="\${B}"
+                                    OLD_SLOT="\${MODULE_SHORT}-green"
+                                fi
+
+                                cat ~/.docker_pass | docker login -u "\$(cat ~/.docker_user)" --password-stdin
+
+                                \$DC pull "\$NEXT_SERVICE"
+                                \$DC up -d --no-deps "\$NEXT_SERVICE"
+
+                                echo "--- Waiting for \$NEXT_SERVICE startup ---"
                                 sleep 20
 
-                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE;/" nginx.conf
+                                if ! docker ps --format '{{.Names}}' | grep -qx "\$NEXT_SERVICE"; then
+                                    echo "ERROR: \$NEXT_SERVICE is not running"
+                                    docker logs --tail 200 "\$NEXT_SERVICE" || true
+                                    exit 1
+                                fi
+
+                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE:\$NEXT_PORT;/" nginx.conf
+
+                                \$DC up -d nginx_proxy
+                                docker exec nginx_proxy nginx -t
                                 docker exec nginx_proxy nginx -s reload
-                                
-                                # 이전 컨테이너 정리 (리소스 확보)
-                                docker-compose stop \$OLD_SLOT
-                                echo "--- MSA Cluster Deploy Success: \$NEXT_SERVICE ---"
-EOF
+
+                                \$DC stop "\$OLD_SLOT" || true
+
+                                echo "--- MSA Cluster Deploy Success: \$NEXT_SERVICE:\$NEXT_PORT ---"
+        EOF
                         """
-                    } 
-                } 
-            } 
-        } 
-    } 
+                    }
+                }
+            }
+        }
                             
     post {
         always {
