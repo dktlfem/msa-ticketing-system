@@ -155,9 +155,9 @@ SPRING_REDIS_PASSWORD=${env.REDIS_PASSWORD}
                                     exit 1
                                 fi
 
-                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE;/" nginx.conf
+                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE:\$NEXT_PORT;/" nginx.conf
                                 
-                                docker-compose up -d nginx_proxy
+                                \$DC up -d nginx_proxy
                                 docker exec nginx_proxy nginx -t
                                 docker exec nginx_proxy nginx -s reload
 
