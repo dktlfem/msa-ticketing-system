@@ -1,6 +1,11 @@
 package com.koesc.ci_cd_test_app.implement.manager;
 
+import com.koesc.ci_cd_test_app.domain.Seat;
 import com.koesc.ci_cd_test_app.domain.SeatStatus;
+import com.koesc.ci_cd_test_app.implement.mapper.SeatMapper;
+import com.koesc.ci_cd_test_app.implement.reader.SeatReader;
+import com.koesc.ci_cd_test_app.implement.validator.SeatValidator;
+import com.koesc.ci_cd_test_app.implement.writer.SeatWriter;
 import com.koesc.ci_cd_test_app.storage.entity.SeatEntity;
 import com.koesc.ci_cd_test_app.storage.repository.SeatRepository;
 import org.assertj.core.api.Assertions;
@@ -18,8 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
  * SeatHolderTest -> Mockito 단위 테스트(로직의 정합성)
@@ -30,7 +34,16 @@ import static org.mockito.Mockito.verify;
 public class SeatHolderTest {
 
     @Mock
-    private SeatRepository seatRepository;
+    private SeatReader seatReader;
+
+    @Mock
+    private SeatMapper seatMapper;
+
+    @Mock
+    private SeatValidator seatValidator;
+
+    @Mock
+    private SeatWriter seatWriter;
 
     @InjectMocks
     private SeatHolder seatHolder;
@@ -47,19 +60,36 @@ public class SeatHolderTest {
                 .price(new BigDecimal("10000"))
                 .build();
 
-        given(seatRepository.findById(seatId)).willReturn(Optional.of(seatEntity));
-        given(seatRepository.saveAndFlush(any(SeatEntity.class))).willReturn(seatEntity);
+        given(seatReader.readEntity(seatId)).willReturn(seatEntity);
 
+        // SeatHolder 내부에서 mapper/validator를 쓰니 최소 스텁
+        Seat seat = mock(Seat.class);
+        given(seatMapper.toDomain(any(SeatEntity.class))).willReturn(seat);
+
+        // seat.hold()가 null이 아니도록
+        Seat seatAfterHold = mock(Seat.class);
+        given(seat.hold()).willReturn(seatAfterHold);
+
+        doNothing().when(seatValidator).validateAvailable(any(Seat.class));
+
+        // updateWithFlush 반환값(Seat)을 null이 아니라 HOLD Seat로 반환
+        Seat returned = mock(Seat.class);
+        given(returned.getStatus()).willReturn(SeatStatus.HOLD);
+
+        given(seatWriter.updateWithFlush(any(Seat.class), any(SeatEntity.class)))
+                .willReturn(returned);
 
         // 2. when
-        SeatEntity result = seatHolder.hold(seatId);
-
+        Seat result = seatHolder.hold(seatId);
 
         // 3. then
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo(SeatStatus.HOLD); // 상태 변경 확인
-        verify(seatRepository).findById(seatId);
-        verify(seatRepository).saveAndFlush(any(SeatEntity.class));
+
+        verify(seatReader).readEntity(seatId);
+        verify(seatMapper).toDomain(seatEntity);
+        verify(seatValidator).validateAvailable(any(Seat.class));
+        verify(seatWriter).updateWithFlush(any(Seat.class), eq(seatEntity));
     }
 
     @Test
@@ -73,17 +103,26 @@ public class SeatHolderTest {
                 .status(SeatStatus.AVAILABLE)
                 .build();
 
-        given(seatRepository.findById(seatId)).willReturn(Optional.of(seatEntity));
+        given(seatReader.readEntity(seatId)).willReturn(seatEntity);
 
-        // save 호출 시 낙관적 락 예외가 발생하는 상황을 Stubbing
-        given(seatRepository.saveAndFlush(any(SeatEntity.class)))
+        Seat seat = mock(Seat.class);
+        given(seatMapper.toDomain(any(SeatEntity.class))).willReturn(seat);
+
+        // seat.hold()가 null이면 writer까지 못 감
+        Seat seatAfterHold = mock(Seat.class);
+        given(seat.hold()).willReturn(seatAfterHold);
+
+        doNothing().when(seatValidator).validateAvailable(any(Seat.class));
+
+        // 예외는 seatRepository가 아니라 seatWriter.updateWithFlush에 걸어야 함
+        given(seatWriter.updateWithFlush(any(Seat.class), any(SeatEntity.class)))
                 .willThrow(new ObjectOptimisticLockingFailureException(SeatEntity.class, seatId));
 
         // 2.  when & then
         assertThatThrownBy(() -> seatHolder.hold(seatId))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
 
-        verify(seatRepository).saveAndFlush(any(SeatEntity.class));
+        verify(seatWriter).updateWithFlush(any(Seat.class), eq(seatEntity));
     }
 
     @Test
@@ -92,13 +131,17 @@ public class SeatHolderTest {
 
         // 1. given
         Long seatId = 999L;
-        given(seatRepository.findById(seatId)).willReturn(Optional.empty());
+        given(seatReader.readEntity(seatId))
+                .willThrow(new IllegalArgumentException("존재하지 않는 좌석입니다."));
 
         // 2. when & then
         assertThatThrownBy(() -> seatHolder.hold(seatId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("존재하지 않는 좌석입니다.");
 
-        verify(seatRepository, never()).save(any()); // 저장은 호출되지 않아야 함
+        verify(seatWriter, never()).updateWithFlush(any(), any()); // 저장은 호출되지 않아야 함
+        verify(seatWriter, never()).update(any(), any());
+        verify(seatValidator, never()).validateAvailable(any());
+        verify(seatMapper, never()).toDomain(any());
     }
 }
