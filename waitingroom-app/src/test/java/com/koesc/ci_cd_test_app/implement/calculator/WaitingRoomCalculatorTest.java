@@ -1,5 +1,6 @@
 package com.koesc.ci_cd_test_app.implement.calculator;
 
+import com.koesc.ci_cd_test_app.global.calculator.WaitingRoomCalculator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
