@@ -2,10 +2,11 @@ package com.koesc.ci_cd_test_app.storage.repository;
 
 import com.koesc.ci_cd_test_app.domain.WaitingTokenStatus;
 import com.koesc.ci_cd_test_app.storage.entity.WaitingTokenEntity;
-import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+// Spring Data JPA @Query 바인딩에는 io.lettuce.core.dynamic.annotation.Param 대신 아래 임포트로 변경
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,5 +26,6 @@ public interface WaitingTokenRepository extends JpaRepository<WaitingTokenEntity
      */
     @Modifying
     @Query("DELETE FROM WaitingTokenEntity w WHERE w.expiredAt < :now OR w.status IN :statuses")
-    void deleteByExpiredAtBeforeOrStatusIn(@Param("now")LocalDateTime now, @Param("statuses") List<WaitingTokenStatus> statuses);
+    void deleteByExpiredAtBeforeOrStatusIn(@Param("now")LocalDateTime now,
+                                           @Param("statuses") List<WaitingTokenStatus> statuses);
 }

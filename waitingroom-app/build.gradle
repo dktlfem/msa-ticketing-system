@@ -39,6 +39,12 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
+    //
+    testImplementation 'io.projectreactor:reactor-test'
+
+    // h2 의존성 추가
+    testImplementation 'com.h2database:h2'
+
     // DB 드라이버
     runtimeOnly 'com.mysql:mysql-connector-j'
 }
