@@ -102,70 +102,70 @@ SPRING_REDIS_PASSWORD=${env.REDIS_PASSWORD}
                             scp -i ${KEY_FILE} -o StrictHostKeyChecking=no nginx.conf ubuntu@${env.EC2_HOST}:/home/ubuntu/app/nginx.conf
                         """
 
-                        sh """
-                            ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${env.EC2_HOST} 'bash -s' << 'EOF'
-                                set -e
-                                cd /home/ubuntu/app || exit 1
+                        sh("""\
+                            ssh -i ${KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${env.EC2_HOST} 'bash -s' <<'EOF'
+                            set -e
+                            cd /home/ubuntu/app || exit 1
 
-                                if docker compose version >/dev/null 2>&1; then
-                                    DC="docker compose"
-                                else
-                                    DC="docker-compose"
-                                fi
+                            if docker compose version >/dev/null 2>&1; then
+                                DC="docker compose"
+                            else
+                                DC="docker-compose"
+                            fi
 
-                                MODULE="${params.TARGET_MODULE}"
-                                MODULE_SHORT=\${MODULE%-app}
+                            MODULE="${params.TARGET_MODULE}"
+                            MODULE_SHORT=\${MODULE%-app}
 
-                                if [ "\$MODULE_SHORT" = "user" ]; then
-                                    B=8081; G=8082
-                                elif [ "\$MODULE_SHORT" = "waitingroom" ]; then
-                                    B=8085; G=8086
-                                elif [ "\$MODULE_SHORT" = "concert" ]; then
-                                    B=8087; G=8088
-                                elif [ "\$MODULE_SHORT" = "booking" ]; then
-                                    B=8089; G=8090
-                                elif [ "\$MODULE_SHORT" = "payment" ]; then
-                                    B=8091; G=8092
-                                else
-                                    echo "Unsupported module: \$MODULE"
-                                    exit 1
-                                fi
+                            if [ "\$MODULE_SHORT" = "user" ]; then
+                                B=8081; G=8082
+                            elif [ "\$MODULE_SHORT" = "waitingroom" ]; then
+                                B=8085; G=8086
+                            elif [ "\$MODULE_SHORT" = "concert" ]; then
+                                B=8087; G=8088
+                            elif [ "\$MODULE_SHORT" = "booking" ]; then
+                                B=8089; G=8090
+                            elif [ "\$MODULE_SHORT" = "payment" ]; then
+                                B=8091; G=8092
+                            else
+                                echo "Unsupported module: \$MODULE"
+                                exit 1
+                            fi
 
-                                if grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -q "server .*:\${B};"; then
-                                    NEXT_SERVICE="\${MODULE_SHORT}-green"
-                                    NEXT_PORT="\${G}"
-                                    OLD_SLOT="\${MODULE_SHORT}-blue"
-                                else
-                                    NEXT_SERVICE="\${MODULE_SHORT}-blue"
-                                    NEXT_PORT="\${B}"
-                                    OLD_SLOT="\${MODULE_SHORT}-green"
-                                fi
+                            if grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -q "server .*:\${B};"; then
+                                NEXT_SERVICE="\${MODULE_SHORT}-green"
+                                NEXT_PORT="\${G}"
+                                OLD_SLOT="\${MODULE_SHORT}-blue"
+                            else
+                                NEXT_SERVICE="\${MODULE_SHORT}-blue"
+                                NEXT_PORT="\${B}"
+                                OLD_SLOT="\${MODULE_SHORT}-green"
+                            fi
 
-                                cat ~/.docker_pass | docker login -u "\$(cat ~/.docker_user)" --password-stdin
+                            cat ~/.docker_pass | docker login -u "\$(cat ~/.docker_user)" --password-stdin
 
-                                \$DC pull "\$NEXT_SERVICE"
-                                \$DC up -d --no-deps "\$NEXT_SERVICE"
+                            \$DC pull "\$NEXT_SERVICE"
+                            \$DC up -d --no-deps "\$NEXT_SERVICE"
 
-                                echo "--- Waiting for \$NEXT_SERVICE startup ---"
-                                sleep 20
+                            echo "--- Waiting for \$NEXT_SERVICE startup ---"
+                            sleep 20
 
-                                if ! docker ps --format '{{.Names}}' | grep -qx "\$NEXT_SERVICE"; then
-                                    echo "ERROR: \$NEXT_SERVICE is not running"
-                                    docker logs --tail 200 "\$NEXT_SERVICE" || true
-                                    exit 1
-                                fi
+                            if ! docker ps --format '{{.Names}}' | grep -qx "\$NEXT_SERVICE"; then
+                                echo "ERROR: \$NEXT_SERVICE is not running"
+                                docker logs --tail 200 "\$NEXT_SERVICE" || true
+                                exit 1
+                            fi
 
-                                sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE:\$NEXT_PORT;/" nginx.conf
-                                
-                                \$DC up -d nginx_proxy
-                                docker exec nginx_proxy nginx -t
-                                docker exec nginx_proxy nginx -s reload
+                    sed -i "/upstream \${MODULE_SHORT}_servers/,/}/ s/server .*:.*;/server \$NEXT_SERVICE:\$NEXT_PORT;/" nginx.conf
 
-                                \$DC stop "\$OLD_SLOT" || true
+                    \$DC up -d nginx_proxy
+                    docker exec nginx_proxy nginx -t
+                    docker exec nginx_proxy nginx -s reload
 
-                                echo "--- MSA Cluster Deploy Success: \$NEXT_SERVICE:\$NEXT_PORT ---"
-        EOF
-                        """
+                    \$DC stop "\$OLD_SLOT" || true
+
+                    echo "--- MSA Cluster Deploy Success: \$NEXT_SERVICE:\$NEXT_PORT ---"
+                    EOF
+                    """.stripIndent())
                     }
                 }
             }
