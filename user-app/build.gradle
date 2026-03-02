@@ -14,6 +14,7 @@ dependencies {
 
     // DB 드라이버
     runtimeOnly 'com.mysql:mysql-connector-j'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 // 💡 배포 파일명 고정 설정은 앱마다 다를 수 있으니 여기에 둠.

@@ -1,6 +1,7 @@
 package com.koesc.ci_cd_test_app.api.common;
 
 import com.koesc.ci_cd_test_app.api.controller.UserController;
+import com.koesc.ci_cd_test_app.business.AiModelService;
 import com.koesc.ci_cd_test_app.business.UserService;
 import com.koesc.ci_cd_test_app.global.config.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,9 @@ public class ApiCommonTraceTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AiModelService aiModelService;
 
     @Test
     @WithMockUser

@@ -3,6 +3,7 @@ package com.koesc.ci_cd_test_app.api.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.koesc.ci_cd_test_app.api.request.UserRequestDTO;
 import com.koesc.ci_cd_test_app.api.response.UserResponseDTO;
+import com.koesc.ci_cd_test_app.business.AiModelService;
 import com.koesc.ci_cd_test_app.business.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,9 @@ public class UserControllerTest {
     // 스프링부트 v3.4.0부터 @MockBean -> @MockitoBean으로 이름 변경 (기능은 동일)
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AiModelService aiModelService;
 
     @Test
     @DisplayName("회원가입 요청 시 유효한 입력이면 200 OK를 반환한다")
