@@ -1,6 +1,9 @@
 package com.koesc.ci_cd_test_app;
 
+import com.koesc.ci_cd_test_app.testconfig.TestClockConfig;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -8,6 +11,8 @@ import org.testcontainers.containers.MySQLContainer;
 
 @SpringBootTest
 @ActiveProfiles("test") // test/resources/application.properties를 사용
+@Import(TestClockConfig.class)
+@AutoConfigureMockMvc
 public abstract class AbstractIntegrationTest {
 
     static final MySQLContainer<?> MYSQL_CONTAINER;
