@@ -1,14 +1,12 @@
 package com.koesc.ci_cd_test_app.implement.manager;
 
 import com.koesc.ci_cd_test_app.domain.Seat;
-import com.koesc.ci_cd_test_app.implement.mapper.SeatMapper;
 import com.koesc.ci_cd_test_app.implement.reader.SeatReader;
 import com.koesc.ci_cd_test_app.implement.validator.SeatValidator;
 import com.koesc.ci_cd_test_app.implement.writer.SeatWriter;
-import com.koesc.ci_cd_test_app.storage.entity.SeatEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SeatHolder {
 
-    private final SeatMapper seatMapper;
     private final SeatReader seatReader;
     private final SeatWriter seatWriter;
     private final SeatValidator seatValidator;
@@ -47,25 +44,16 @@ public class SeatHolder {
     public Seat hold(Long seatId) {
         log.info("[SeatHolder] 좌석 점유 시도 - seatId: {}", seatId);
 
-        // 1. DB에서 엔티티 조회 (최신 version 포함)
-        SeatEntity entity = seatReader.readEntity(seatId);
-
-        // 2. 도메인으로 변환
-        Seat seat = seatMapper.toDomain(entity);
-
-        // 3. 도메인 레벨 검증 (AVAILABLE인지)
+        Seat seat = seatReader.read(seatId);
         seatValidator.validateAvailable(seat);
 
-        // 4. 도메인 상태 변경 - 불변 도메인이라 반환값을 받아야 함
-        // 만약 조회 시점과 저장 시점의 version이 다르면 Exception 발생
         Seat updatedSeat = seat.hold();
 
-        // 5. 변경을 엔티티에 반영하고 flush해서 충돌(OptimisticLock)을 조기에 탐지
         try {
-            Seat result = seatWriter.updateWithFlush(updatedSeat, entity);
+            Seat result = seatWriter.updateWithFlush(updatedSeat, seat.getVersion());
             log.info("[SeatHolder] 좌석 점유 성공 - seatId: {}", seatId);
             return result;
-        } catch (ObjectOptimisticLockingFailureException e) {
+        } catch (OptimisticLockingFailureException e) {
             log.warn("[SeatHolder] 동시성 충돌 발생 - 다른 사용자가 먼저 점유함. seatId: {}", seatId);
             throw e; // 상위에서 재시도나 사용자 메시지 처리하도록 전파
         }
@@ -78,22 +66,9 @@ public class SeatHolder {
     public Seat release(Long seatId) {
         log.info("[SeatHolder] 좌석 점유 해제 - seatId: {}", seatId);
 
-        // 1. DB에서 좌석 조회
-        SeatEntity entity = seatReader.readEntity(seatId);
-
-        // 2. POJO 도메인으로 변환
-        Seat seat = seatMapper.toDomain(entity);
-
-        // 2-1. 정책이 있으면 여기서 검증 추가 가능
-        // seatValidator.validateHold(seat);
-
-        // 3. 도메인 상태 변경 - 불변 도메인이라 반환값을 받아야 함
+        Seat seat = seatReader.read(seatId);
         Seat updatedSeat = seat.release();
 
-        // 4. write (release는 보통 flush 불필요. 하지만 일관성 원하면 updateWithFlush 사용해도 됨)
-        seatWriter.update(updatedSeat, entity);
-
-        // 5. 저장 결과를 도메인으로 변환해서 날림
-        return seatMapper.toDomain(entity);
+        return seatWriter.update(updatedSeat, seat.getVersion());
     }
 }

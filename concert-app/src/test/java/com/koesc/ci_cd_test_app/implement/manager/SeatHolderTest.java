@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
@@ -30,14 +31,11 @@ import static org.mockito.Mockito.*;
  * "내 로직이 리포지토리를 잘 호출하는가?"와 "리포지토리에서 락 예외가 발생했을 때 내가 잘 던지는가?"를 검증 (속도가 매우 빠름)
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("SeatHolder 단위 테스트 :  (Mock)")
+@DisplayName("SeatHolder 단위 테스트 : (Mock)")
 public class SeatHolderTest {
 
     @Mock
     private SeatReader seatReader;
-
-    @Mock
-    private SeatMapper seatMapper;
 
     @Mock
     private SeatValidator seatValidator;
@@ -54,30 +52,18 @@ public class SeatHolderTest {
 
         // 1. given
         Long seatId = 1L;
-        SeatEntity seatEntity = SeatEntity.builder()
-                .seatId(seatId)
-                .status(SeatStatus.AVAILABLE)
-                .price(new BigDecimal("10000"))
-                .build();
 
-        given(seatReader.readEntity(seatId)).willReturn(seatEntity);
+        Seat currentSeat = mock(Seat.class);
+        Seat heldSeat = mock(Seat.class);
+        Seat savedSeat = mock(Seat.class);
 
-        // SeatHolder 내부에서 mapper/validator를 쓰니 최소 스텁
-        Seat seat = mock(Seat.class);
-        given(seatMapper.toDomain(any(SeatEntity.class))).willReturn(seat);
+        given(seatReader.read(seatId)).willReturn(currentSeat);
+        given(currentSeat.getVersion()).willReturn(1L);
+        given(currentSeat.hold()).willReturn(heldSeat);
+        doNothing().when(seatValidator).validateAvailable(currentSeat);
 
-        // seat.hold()가 null이 아니도록
-        Seat seatAfterHold = mock(Seat.class);
-        given(seat.hold()).willReturn(seatAfterHold);
-
-        doNothing().when(seatValidator).validateAvailable(any(Seat.class));
-
-        // updateWithFlush 반환값(Seat)을 null이 아니라 HOLD Seat로 반환
-        Seat returned = mock(Seat.class);
-        given(returned.getStatus()).willReturn(SeatStatus.HOLD);
-
-        given(seatWriter.updateWithFlush(any(Seat.class), any(SeatEntity.class)))
-                .willReturn(returned);
+        given(seatWriter.updateWithFlush(heldSeat, 1L)).willReturn(savedSeat);
+        given(savedSeat.getStatus()).willReturn(SeatStatus.HOLD);
 
         // 2. when
         Seat result = seatHolder.hold(seatId);
@@ -86,10 +72,9 @@ public class SeatHolderTest {
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo(SeatStatus.HOLD); // 상태 변경 확인
 
-        verify(seatReader).readEntity(seatId);
-        verify(seatMapper).toDomain(seatEntity);
-        verify(seatValidator).validateAvailable(any(Seat.class));
-        verify(seatWriter).updateWithFlush(any(Seat.class), eq(seatEntity));
+        verify(seatReader).read(seatId);
+        verify(seatValidator).validateAvailable(currentSeat);
+        verify(seatWriter).updateWithFlush(heldSeat, 1L);
     }
 
     @Test
@@ -98,40 +83,32 @@ public class SeatHolderTest {
 
         // 1. given
         Long seatId = 1L;
-        SeatEntity seatEntity = SeatEntity.builder()
-                .seatId(seatId)
-                .status(SeatStatus.AVAILABLE)
-                .build();
 
-        given(seatReader.readEntity(seatId)).willReturn(seatEntity);
+        Seat currentSeat = mock(Seat.class);
+        Seat heldSeat = mock(Seat.class);
 
-        Seat seat = mock(Seat.class);
-        given(seatMapper.toDomain(any(SeatEntity.class))).willReturn(seat);
+        given(seatReader.read(seatId)).willReturn(currentSeat);
+        given(currentSeat.getVersion()).willReturn(1L);
+        given(currentSeat.hold()).willReturn(heldSeat);
+        doNothing().when(seatValidator).validateAvailable(currentSeat);
 
-        // seat.hold()가 null이면 writer까지 못 감
-        Seat seatAfterHold = mock(Seat.class);
-        given(seat.hold()).willReturn(seatAfterHold);
-
-        doNothing().when(seatValidator).validateAvailable(any(Seat.class));
-
-        // 예외는 seatRepository가 아니라 seatWriter.updateWithFlush에 걸어야 함
-        given(seatWriter.updateWithFlush(any(Seat.class), any(SeatEntity.class)))
-                .willThrow(new ObjectOptimisticLockingFailureException(SeatEntity.class, seatId));
+        given(seatWriter.updateWithFlush(heldSeat, 1L))
+                .willThrow(new OptimisticLockingFailureException("optimistic lock"));
 
         // 2.  when & then
         assertThatThrownBy(() -> seatHolder.hold(seatId))
-                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
+                .isInstanceOf(OptimisticLockingFailureException.class);
 
-        verify(seatWriter).updateWithFlush(any(Seat.class), eq(seatEntity));
+        verify(seatWriter).updateWithFlush(heldSeat, 1L);
     }
 
     @Test
-    @DisplayName("좌석 부재 : 존재하지 않는 좌석 ID로 점유 시도 시 IllegalArgumentException이 발생한다.")
+    @DisplayName("좌석 부재 : 존재하지 않는 좌석 ID로 점유 시도 시 예외가 발생한다.")
     void hold_NotFound() {
 
         // 1. given
         Long seatId = 999L;
-        given(seatReader.readEntity(seatId))
+        given(seatReader.read(seatId))
                 .willThrow(new IllegalArgumentException("존재하지 않는 좌석입니다."));
 
         // 2. when & then
@@ -139,9 +116,8 @@ public class SeatHolderTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("존재하지 않는 좌석입니다.");
 
-        verify(seatWriter, never()).updateWithFlush(any(), any()); // 저장은 호출되지 않아야 함
-        verify(seatWriter, never()).update(any(), any());
+        verify(seatWriter, never()).updateWithFlush(any(Seat.class), anyLong()); // 저장은 호출되지 않아야 함
+        verify(seatWriter, never()).update(any(Seat.class), anyLong());
         verify(seatValidator, never()).validateAvailable(any());
-        verify(seatMapper, never()).toDomain(any());
     }
 }

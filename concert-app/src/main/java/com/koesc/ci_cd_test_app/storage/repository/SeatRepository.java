@@ -5,6 +5,7 @@ import com.koesc.ci_cd_test_app.storage.entity.SeatEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SeatRepository extends JpaRepository<SeatEntity, Long> {
 
@@ -18,4 +19,6 @@ public interface SeatRepository extends JpaRepository<SeatEntity, Long> {
 
     // 특정 회차의 가용한(AVAILABLE) 좌석만 조회하는 기능
     List<SeatEntity> findAllByScheduleIdAndStatus(Long scheduleId, SeatStatus status);
+
+    Optional<SeatEntity> findBySeatIdAndVersion(Long seatId, Long version);
 }
