@@ -26,6 +26,40 @@ public interface WaitingTokenRepository extends JpaRepository<WaitingTokenEntity
      */
     @Modifying
     @Query("DELETE FROM WaitingTokenEntity w WHERE w.expiredAt < :now OR w.status IN :statuses")
-    void deleteByExpiredAtBeforeOrStatusIn(@Param("now")LocalDateTime now,
+    void deleteByExpiredAtBeforeOrStatusIn(@Param("now") LocalDateTime now,
                                            @Param("statuses") List<WaitingTokenStatus> statuses);
+
+    /**
+     * ACTIVE 이고 아직 만료되지 않았을 때만 상태 변경
+     * consume 용도
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update WaitingTokenEntity w
+           set w.status = :nextStatus
+        where w.tokenId = :tokenId
+           and w.status = :currentStatus
+           and w.expiredAt > :now
+    """)
+    int updateStatusIfCurrentAndNotExpired(@Param("tokenId") String tokenId,
+                                        @Param("currentStatus") WaitingTokenStatus currentStatus,
+                                        @Param("nextStatus") WaitingTokenStatus nextStatus,
+                                        @Param("now") LocalDateTime now);
+
+    /**
+     * ACTIVE 이고 이미 만료되었을 때만 상태 변경
+     * expired 마킹 용도
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update WaitingTokenEntity w
+           set w.status = :nextStatus
+        where w.tokenId = :tokenId
+           and w.status = :currentStatus
+           and w.expiredAt <= :now
+    """)
+    int updateStatusIfCurrentAndExpired(@Param("tokenId") String tokenId,
+                                        @Param("currentStatus") WaitingTokenStatus currentStatus,
+                                        @Param("nextStatus") WaitingTokenStatus nextStatus,
+                                        @Param("now") LocalDateTime now);
 }

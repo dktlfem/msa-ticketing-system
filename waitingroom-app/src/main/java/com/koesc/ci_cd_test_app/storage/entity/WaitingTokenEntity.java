@@ -31,7 +31,7 @@ public class WaitingTokenEntity {
      * 따라서 난수화된 UUID를 사용한다.
      */
     @Id
-    @Column(name = "token_id", length = 36)
+    @Column(name = "token_id", length = 100)
     private String tokenId;
 
     @Column(name = "user_id", nullable = false)
@@ -53,5 +53,9 @@ public class WaitingTokenEntity {
     // 만료 처리 비즈니스 로직 (Setter 대신 도메인 메서드 사용)
     public void expire() {
         this.status = WaitingTokenStatus.EXPIRED;
+    }
+
+    public void changeStatus(WaitingTokenStatus status) {
+        this.status = status;
     }
 }
