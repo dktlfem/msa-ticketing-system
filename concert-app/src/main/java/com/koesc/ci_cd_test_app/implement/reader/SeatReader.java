@@ -28,14 +28,6 @@ public class SeatReader {
     }
 
     /**
-     * 엔터티로 조회 (Writer의 Dirty Checking 업데이트용)
-     */
-    public SeatEntity readEntity(Long seatId) {
-        return seatRepository.findById(seatId)
-                .orElseThrow(() -> new EntityNotFoundException("좌석 엔티티를 찾을 수 없습니다. ID: " + seatId));
-    }
-
-    /**
      * 특정 스케줄의 예약 가능한 좌석 목록 조회
      */
     public List<Seat> readAvailable(Long scheduleId) {

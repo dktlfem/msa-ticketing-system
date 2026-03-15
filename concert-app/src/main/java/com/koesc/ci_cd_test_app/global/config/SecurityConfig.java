@@ -39,7 +39,15 @@ public class SecurityConfig {
                         // DispatcherType.ERROR를 허용 (내부 에러 발생 시 리다이렉트 허용)
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // 1. Actuator 및 API 경로 전체 허용
-                        .requestMatchers("/api/v1/waiting-room/**", "/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/waiting-room/**",
+                                "/api/v1/**",
+                                "/internal/v1/**",
+                                "/error",
+                                "/actuator/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
