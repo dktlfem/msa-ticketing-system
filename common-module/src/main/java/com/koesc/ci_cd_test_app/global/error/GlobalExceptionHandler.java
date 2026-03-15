@@ -1,15 +1,16 @@
 package com.koesc.ci_cd_test_app.global.error;
 
 import com.koesc.ci_cd_test_app.global.error.exception.BusinessException;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * GlobalExceptionHandler: Controller 실행 중 던져진 예외를 가로채서(intercept) HTTP 응답(JSON)으로 변환해줌.
@@ -66,5 +67,16 @@ public class GlobalExceptionHandler {
         log.debug("[BusinessStack]", e);
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ErrorResponse.of(ec, e.getMessage()));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException e) {
+        HttpStatusCode status = e.getStatusCode();
+        String reason = (e.getReason() != null) ? e.getReason() : status.toString();
+
+        log.warn("[ResponseStatus] status={}, reason={}", status.value(), reason);
+
+        return ResponseEntity.status(status)
+                .body(new ErrorResponse("HTTP_" + status.value(), reason, status.value()));
     }
 }
