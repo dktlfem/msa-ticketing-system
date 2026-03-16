@@ -29,3 +29,72 @@
 #### ⚡ 고부하 상황에서의 성능 임계치 검증 (k6 Stress Test)
 - 방법: 1VU(Smoke) → 200VU(Load) → 1,000VU(Stress) 단계별 시뮬레이션 수행
 - 결과: 1,000명 동시 접속 상황에서도 평균 지연시간 11.41ms의 초고속 응답 유지
+# 플랫폼 설계 / API / 운영 문서 패키지
+
+이 문서 묶음은 현재 프로젝트의 `scg-app`, `payment-app`, `booking-app`, `waitingroom-app`, `concert-app`, `user-app`, self-hosted staging, Redis 분리 노드, CI/CD, 보안, 관측성까지를 한 번에 설명하기 위한 **GitHub/Notion 친화형 문서 패키지**입니다.
+
+## 포함 파일
+
+| 문서 | 역할 |
+| --- | --- |
+| `01-api-specification.md` | 외부/내부 API 명세, 엔드포인트, 대표 요청/응답 예시 |
+| `02-architecture-infrastructure.md` | 시스템 구성도, 네트워크, CI/CD, IaC 범위 |
+| `03-database-cache-design.md` | ERD, 인덱스, 캐싱, 정합성, 파티셔닝 전략 |
+| `04-security-auth-rate-limiting.md` | 보안 경계, 인증/인가, 내부 API 은닉, rate limiting |
+| `05-observability.md` | ELK, Prometheus/Grafana, Jaeger, DB/APM 관측 전략 |
+| `06-developer-experience.md` | Swagger, 문서화, starter/Config roadmap, GitHub/Notion 운영 방식 |
+| `07-performance-test-runbook.md` | CountDownLatch 동시성 테스트, 판정 기준, 트러블슈팅 |
+| `08-additional-recommended-docs.md` | ADR, Runbook, SLO, DR 등 추가 추천 문서 |
+
+## 함께 제공한 Excel 파일
+
+- `platform-api-and-mapping.xlsx`
+
+이 파일에는 아래 시트가 들어 있습니다.
+
+- `Summary`: 엔드포인트 수와 서비스별 요약
+- `API_List`: 전체 외부/내부 API 카탈로그
+- `Data_Mapping`: 헤더/Body/DB/Redis/내부 API 간 데이터 흐름 매핑
+- `ERD_Summary`: 스키마/테이블/인덱스 요약
+
+## 문서 운영 권장안
+
+### 권장 결론
+
+- **주 문서**: Markdown(GitHub)
+- **발표/공유 허브**: Notion
+- **보조 자료**: Excel
+
+### 왜 이렇게 권장하는가
+
+#### Markdown(GitHub)
+
+- 버전 관리가 가장 강함
+- 코드와 문서를 같이 PR로 관리 가능
+- diff 추적이 쉬움
+
+#### Notion
+
+- 읽기 경험이 좋음
+- 링크 허브/발표 자료로 쓰기 편함
+- 면접/리뷰 시 공유가 편함
+
+#### Excel
+
+- API 리스트 요약
+- 데이터 매핑
+- ERD 요약표
+- 테스트 결과 표
+
+같은 **정형 테이블**에 강함
+
+## 추천 운영 방식
+
+1. GitHub `docs/`를 source of truth로 유지
+2. Notion에는 README/Overview를 중심으로 링크 허브 구성
+3. Excel은 정형 표가 필요한 부분만 보조적으로 첨부
+4. 포트폴리오 제출 시 README에서 문서/엑셀을 함께 링크
+
+## 한 줄 정리
+
+**전체 흐름과 기술력은 Markdown/Notion으로 보여주고, API 목록/매핑표/체크리스트는 Excel로 보조하는 방식이 가장 좋습니다.**
