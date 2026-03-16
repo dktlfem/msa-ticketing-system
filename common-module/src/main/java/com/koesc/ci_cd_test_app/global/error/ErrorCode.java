@@ -26,7 +26,19 @@ public enum ErrorCode {
 
     // 낙관적 락(OptimisticLock)
     SEAT_ALREADY_HELD(HttpStatus.CONFLICT, "S001", "다른 사용자가 먼저 좌석을 선택했습니다."),
-    SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "S002", "존재하지 않는 좌석입니다.");
+    SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "S002", "존재하지 않는 좌석입니다."),
+
+    // 예약(Reservation) 관련
+    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 예약입니다."),
+    RESERVATION_NOT_CONFIRMABLE(HttpStatus.CONFLICT, "R002", "결제 대기 중이 아니거나 만료된 예약입니다."),
+
+    // 결제(Payment) 관련
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 결제입니다."),
+    PAYMENT_ALREADY_EXISTS(HttpStatus.CONFLICT, "P002", "이미 결제가 존재하는 예약입니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "P003", "결제 금액이 일치하지 않습니다."),
+    PAYMENT_INVALID_STATUS(HttpStatus.CONFLICT, "P004", "현재 상태에서 허용되지 않는 결제 요청입니다."),
+    PAYMENT_PG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "P005", "결제 처리 중 오류가 발생했습니다."),
+    PAYMENT_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "P006", "동일한 요청이 처리 중입니다.");
 
 
     private final HttpStatus httpStatus;
