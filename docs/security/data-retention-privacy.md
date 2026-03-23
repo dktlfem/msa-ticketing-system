@@ -14,7 +14,6 @@ reviewer: ""
 - [Planned Improvements](#planned-improvements)
 - [Trade-offs](#trade-offs)
 - [Failure Scenarios](#failure-scenarios)
-- [Interview Explanation (90s version)](#interview-explanation-90s-version)
 
 # Data Retention & Privacy: 데이터 보유·삭제·최소화 원칙
 
@@ -278,15 +277,3 @@ WHERE user_id = {id};
 ```
 
 ---
-
-## Interview Explanation (90s version)
-
-> 데이터를 세 가지로 분류합니다. 첫째, user-app의 이름·이메일·전화번호 같은 직접 PII, 둘째 payment-app의 결제 금액·카드 수단·TossPayments 응답 원문 같은 금융 데이터, 셋째 예약·대기열 이력 같은 행동 데이터입니다.
->
-> 핵심 설계 결정은 pg_response_raw 전체 저장입니다. PG 분쟁 시 원문이 증거 자료가 되므로 스토리지 비용보다 가치가 크다는 판단입니다. 단, TossPayments 응답에 카드번호 마스킹 값이 포함될 수 있어 API 응답에는 절대 노출하지 않고, 마스킹 후 저장하는 것이 다음 개선 항목입니다. 현재 `show-sql=true`가 켜져 있어 SQL 로그에 값이 출력될 수 있는 것이 즉시 처리해야 할 리스크입니다.
->
-> 보유 기간은 결제·예약 데이터 5년(전자상거래법), 사용자 PII는 탈퇴 후 즉시 파기를 원칙으로 제안합니다. 현재 삭제 메커니즘이 없어 수동 SQL로만 처리 가능한 상태이고, 개인정보 파기 API 구현이 다음 우선순위입니다.
-
----
-
-*최종 업데이트: 2026-03-16 | PaymentEntity.java, application.properties 기준 | pg_response_raw 검토 필요*

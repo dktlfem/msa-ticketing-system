@@ -14,7 +14,6 @@ reviewer: ""
 - [Trade-offs](#trade-offs)
 - [Scale-up / Scale-out 판단 기준](#scale-up-scale-out-판단-기준)
 - [Planned Improvements](#planned-improvements)
-- [Interview Explanation (90s version)](#interview-explanation-90s-version)
 
 # Capacity Planning
 
@@ -360,11 +359,3 @@ spring.datasource.hikari.idle-timeout=300000
 - **스케일 트리거**: EC2 CPU 70% 지속 1시간 이상 또는 RDS IOPS 제한 도달 시 스펙 업그레이드 검토
 
 ---
-
-## Interview Explanation (90s version)
-
-> 현재 시스템에서 가장 먼저 병목이 될 구간은 두 곳입니다. 첫째는 Redis 단일 노드입니다. 대기열 진입이 집중되면 Redis 처리량과 Lettuce 커넥션 풀(max 20)이 한계에 부딪힙니다. Redis 장애 시 대기열 전체가 중단됩니다. 둘째는 payment-app의 TossPayments 동기 호출입니다. read timeout이 10초이고 HikariCP 기본 풀이 10개라, 동시 결제 5~10건 이상에서 커넥션 대기가 발생합니다. 수평 확장은 서비스가 Stateless이므로 인스턴스 추가만으로 가능하지만, 그 전에 Redis를 Sentinel로 전환하고 HikariCP 풀 크기를 명시적으로 설정하는 것이 우선입니다. MySQL은 스키마 분리로 논리적 경계는 있지만 물리적 분리는 아직이므로, 하나의 서비스 slow query가 전체에 영향을 줄 수 있습니다.
-
----
-
-*최종 업데이트: 2026-03-19 | 비용 계획 섹션 추가*

@@ -15,7 +15,6 @@ reviewer: ""
 - [Observability](#observability)
 - [Trade-offs](#trade-offs)
 - [Planned Improvements](#planned-improvements)
-- [Interview Explanation (90s version)](#interview-explanation-90s-version)
 
 # Queue Design: waitingroom-app 대기열 설계
 
@@ -356,17 +355,3 @@ planned:
 7. **대기열 운영 메트릭 정교화** (planned): ZCARD 주기 수집, 통과율, 토큰 발급/소비/만료 비율을 Grafana 패널로 시각화.
 
 ---
-
-## Interview Explanation (90s version)
-
-> waitingroom-app을 별도 서비스로 분리한 이유는 오픈 직후 트래픽 폭증 패턴 때문입니다. 대기열이 예약 서비스에 붙어 있으면 Redis 부하가 예약 DB 트랜잭션에 영향을 줍니다. 분리하면 waitingroom-app만 집중 스케일아웃하고, 나머지 서비스는 대기열을 통과한 허용 인원만 처리합니다.
->
-> 핵심 자료구조는 Redis Sorted Set입니다. key는 이벤트 ID, score는 진입 시각 epochMilli, member는 userId입니다. ZADD NX Lua 스크립트로 중복 진입을 원자적으로 차단하고, ZRANK로 순번을 조회합니다.
->
-> 대기열을 통과하면 초당 100명 rate limiter를 통과 후 DB에 UUID 토큰을 발급합니다. UUID를 쓰는 이유는 Long Auto Increment는 예측 가능해 타인 토큰 유추 공격이 가능하기 때문입니다. 토큰은 10분 유효하고 booking-app이 예약 시 검증합니다.
->
-> 가장 큰 한계는 Redis 단일 노드입니다. Redis가 다운되면 대기열이 전면 중단됩니다. Redis Sentinel 도입이 다음 우선순위입니다.
-
----
-
-*최종 업데이트: 2026-03-16 | WaitingRoomManager.java, WaitingRoomWriter.java, WaitingRoomRateLimiter.java, WaitingRoomScheduler.java 기준*

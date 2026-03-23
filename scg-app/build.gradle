@@ -31,19 +31,19 @@ dependencies {
     // CircuitBreaker / Retry
     implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
 
-    // Bulkhead (Phase 4) — resilience4j-circuitbreaker와 별도 모듈, BOM이 버전 관리
+    // Bulkhead — resilience4j-circuitbreaker와 별도 모듈, BOM이 버전 관리
     implementation 'io.github.resilience4j:resilience4j-bulkhead'
 
-    // JWT 검증 (Phase 4) — JJWT 0.12.x, BOM 미관리이므로 버전 명시
+    // JWT 검증 — JJWT 0.12.x, BOM 미관리이므로 버전 명시
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-    // OpenTelemetry (Phase 5) — Spring Boot BOM이 버전 관리
+    // OpenTelemetry — Spring Boot BOM이 버전 관리
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 
-    // Structured Logging (Phase 5) — BOM 비관리, 버전 명시
+    // Structured Logging — BOM 비관리, 버전 명시
     implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
 }
 
