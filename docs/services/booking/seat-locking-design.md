@@ -1,3 +1,22 @@
+---
+title: "Seat Locking Design: booking-app 좌석 선점 및 예약 확정"
+last_updated: 2026-03-18
+author: "민석"
+reviewer: ""
+---
+
+## 목차
+- [Background](#background)
+- [Problem](#problem)
+- [Current Design](#current-design)
+- [State / Flow](#state-flow)
+- [Concurrency / Consistency Risks](#concurrency-consistency-risks)
+- [Failure Scenarios](#failure-scenarios)
+- [Observability](#observability)
+- [Trade-offs](#trade-offs)
+- [Planned Improvements](#planned-improvements)
+- [Interview Explanation (90s version)](#interview-explanation-90s-version)
+
 # Seat Locking Design: booking-app 좌석 선점 및 예약 확정
 
 > 이 문서는 booking-app의 책임 경계, 좌석 선점 흐름, 예약 상태 전이, 동시성 제어 방식을 다룬다.
@@ -44,7 +63,7 @@ booking-app이 **직접 하는 것**:
 booking-app이 **하지 않는 것**:
 - 좌석 상태 직접 변경 → concert-app에 위임
 - 결제 상태 관리 → payment-app 소관
-- 사용자 신원 검증 → SCG의 X-User-Id 헤더에 의존
+- 사용자 신원 검증 → SCG의 Auth-Passport 헤더에 의존 (PassportCodec.decode()로 userId 추출) <!-- 2026-03-22 ADR-0007 Phase 2 완료 반영 -->
 
 ### 서비스 간 의존 관계
 
@@ -202,7 +221,7 @@ ReservationManager.expireReservation(reservationId)
 - 각각 별도 트랜잭션에서 실행되므로 완전한 직렬화 보장 없음
 - 운이 나쁘면 시나리오 B가 발생하고 결제가 자동 환불됨
 
-**이것이 버그인가:** 설계 의도 범위 내다. 예약 만료 = 결제 기회 소멸. 결제 실패 시 자동 환불이 보상 트랜잭션으로 처리된다.
+**이것이 버그인가:** 설계 의도 범위 내다. 예약 만료 = 결제 기회 소멸. 결제 실패 시 자동 환불이 [보상 트랜잭션](../payment/payment-architecture.md)으로 처리된다.
 
 ### 리스크 2: holdSeat 성공 후 reservation save 실패
 

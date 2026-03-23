@@ -1,10 +1,29 @@
+---
+title: "Payment Architecture: payment-app 심화 설계"
+last_updated: 2026-03-18
+author: "민석"
+reviewer: ""
+---
+
+## 목차
+- [Background](#background)
+- [Problem](#problem)
+- [Current Design](#current-design)
+- [State / Flow](#state-flow)
+- [Concurrency / Consistency Risks](#concurrency-consistency-risks)
+- [Failure Scenarios](#failure-scenarios)
+- [Observability](#observability)
+- [Trade-offs](#trade-offs)
+- [Planned Improvements](#planned-improvements)
+- [Interview Explanation (90s version)](#interview-explanation-90s-version)
+
 # Payment Architecture: payment-app 심화 설계
 
 > 이 문서는 payment-app의 내부 구조, 상태 전이, 트랜잭션 경계, 외부 서비스 의존성을 다룬다.
 > API 계약(엔드포인트, 요청/응답 형식)은 [`docs/api/api-spec.md`](../../api/api-spec.md)를 참조한다.
 > DB 스키마·Redis 키 패턴은 [`docs/data/database-cache-design.md`](../../data/database-cache-design.md)를 참조한다.
 > 전체 MSA 서비스 의존 방향은 [`docs/architecture/overview.md`](../../architecture/overview.md)를 참조한다.
-> Saga 흐름 개요는 [`docs/services/payment/payment-saga.md`](./payment-saga.md)를 참조한다.
+> Saga 흐름 개요는 이 문서 하단 `## Saga 흐름 다이어그램` 섹션을 참조한다.
 
 ---
 
@@ -49,7 +68,7 @@ payment-app이 **직접 하는 것**:
 payment-app이 **하지 않는 것** (다른 서비스에 위임):
 - 예약 상태 변경 → booking-app 내부 API
 - 좌석 SOLD 확정 → concert-app (booking-app을 통해 간접 호출)
-- 사용자 신원 검증 → SCG의 X-User-Id 헤더에 의존
+- 사용자 신원 검증 → SCG의 Auth-Passport 헤더에 의존 (PassportCodec.decode()로 userId 추출) <!-- 2026-03-22 ADR-0007 Phase 2 완료 반영 -->
 
 ### 외부 서비스 의존 관계
 
@@ -68,7 +87,7 @@ payment-app
 **concert-app 직접 의존 — 현재 구조와 trade-off:**
 
 `PaymentManager.createPaymentRequest`는 concert-app을 직접 호출해 좌석 가격을 조회한다.
-`docs/architecture/overview.md`에 명시된 `payment → booking → concert` 단방향 의존 원칙에서 벗어난다.
+[`docs/architecture/overview.md`](../../architecture/overview.md)에 명시된 `payment → booking → concert` 단방향 의존 원칙에서 벗어난다.
 
 | 현재 구조 | 권장 구조 (planned) |
 |---------|----------------|
@@ -270,7 +289,7 @@ WHERE status = 'READY' AND created_at < NOW() - INTERVAL 10 MINUTE;
 ```
 
 planned:
-- `payment.confirm.approved`, `payment.confirm.failed`, `payment.cancel_failed` Micrometer counter
+- `payment.confirm.total{result="success/pg_error/booking_failed/cancel_failed"}` Micrometer counter (Prometheus: `payment_confirm_total`) <!-- 2026-03-18 메트릭 명칭 통일 -->
 - CANCEL_FAILED → Alertmanager 자동 알림
 
 ---
@@ -310,4 +329,87 @@ planned:
 
 ---
 
-*최종 업데이트: 2026-03-16 | PaymentManager.java, PaymentWriter.java, IdempotencyManager.java 기준*
+---
+
+## Saga 흐름 다이어그램
+
+payment-app이 오케스트레이터로 동작하는 전체 결제 Saga 흐름입니다.
+
+### 정상 흐름 (Happy Path)
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant WR as waitingroom-app
+    participant BA as booking-app
+    participant CA as concert-app
+    participant PA as payment-app
+    participant TOSS as TossPayments
+
+    Client->>WR: POST /waiting-room/join (대기열 진입)
+    WR-->>Client: 순번 응답
+
+    Client->>WR: GET /waiting-room/status (순번 통과 시)
+    WR-->>Client: ACTIVE token 발급
+
+    Client->>BA: POST /reservations (Queue-Token 포함)
+    BA->>WR: POST /internal/tokens/validate
+    WR-->>BA: 토큰 유효
+    BA->>CA: POST /internal/seats/{id}/hold (낙관적 락)
+    CA-->>BA: HOLD 성공
+    BA->>BA: reservation 저장 (PENDING, TTL 5분)
+    BA->>WR: POST /internal/tokens/{id}/consume
+    BA-->>Client: reservationId 응답
+
+    Client->>PA: POST /payments/prepare
+    PA->>BA: GET /internal/reservations/{id}
+    BA-->>PA: reservation 상태 검증
+    PA->>CA: GET /internal/seats/{id} (가격 조회)
+    CA-->>PA: 가격
+    PA->>PA: Payment 저장 (READY, orderId 생성)
+    PA-->>Client: orderId, amount 응답
+
+    Client->>TOSS: TossPayments SDK 결제 진행
+    TOSS-->>Client: paymentKey 발급
+
+    Client->>PA: POST /payments/confirm (paymentKey, orderId, amount)
+    PA->>PA: amount 검증 (저장값 일치 확인)
+    PA->>TOSS: confirmPayment(paymentKey, orderId, amount)
+    TOSS-->>PA: 승인 성공
+    PA->>PA: Payment → APPROVED (DB UPDATE)
+    PA->>BA: POST /internal/reservations/{id}/confirm
+    BA->>CA: POST /internal/seats/{id}/confirm (HOLD → SOLD)
+    CA-->>BA: SOLD 완료
+    BA-->>PA: 예약 확정 완료
+    PA-->>Client: APPROVED 응답
+```
+
+### 보상 흐름 — booking confirm 실패 시
+
+```mermaid
+sequenceDiagram
+    participant PA as payment-app
+    participant BA as booking-app
+    participant TOSS as TossPayments
+
+    Note over PA: TossPayments 승인 완료, DB APPROVED 업데이트 완료
+    PA->>BA: POST /internal/reservations/{id}/confirm
+    BA-->>PA: 실패 (5xx / 장애)
+
+    Note over PA: initiateRefund() 진입
+    PA->>TOSS: cancelPayment(paymentKey)
+
+    alt 취소 성공
+        TOSS-->>PA: 취소 완료
+        PA->>PA: Payment → REFUNDED
+        Note over PA: reservation 여전히 PENDING 상태<br/>(좌석 HOLD TTL 만료 시 자동 해제)
+    else 취소 실패
+        TOSS-->>PA: 취소 실패
+        PA->>PA: Payment → CANCEL_FAILED
+        Note over PA: [CRITICAL] 로그 발생<br/>수동 개입 필요 (INC-003 절차)
+    end
+```
+
+---
+
+*최종 업데이트: 2026-03-19 | Saga 흐름 다이어그램 추가*

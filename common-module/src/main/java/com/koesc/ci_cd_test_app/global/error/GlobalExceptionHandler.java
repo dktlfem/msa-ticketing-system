@@ -1,6 +1,7 @@
 package com.koesc.ci_cd_test_app.global.error;
 
 import com.koesc.ci_cd_test_app.global.error.exception.BusinessException;
+import com.koesc.ci_cd_test_app.global.gateway.PassportCodecException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,6 +22,25 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 @RestControllerAdvice // 모든 Controller에서 발생하는 예외를 여기서 가로챔. (공통 예외 처리기)
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(PassportCodecException.class)
+    public ResponseEntity<ErrorResponse> handlePassportCodec(PassportCodecException e) {
+        log.warn("[AuthPassport] Failed to decode Auth-Passport header: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse("A001", "인증 컨텍스트가 유효하지 않습니다.", HttpStatus.UNAUTHORIZED.value()));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(MissingRequestHeaderException e) {
+        log.warn("[MissingHeader] {}", e.getMessage());
+        if ("Auth-Passport".equals(e.getHeaderName())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("A001", "인증 헤더가 누락되었습니다.", HttpStatus.UNAUTHORIZED.value()));
+        }
+        ErrorCode ec = ErrorCode.INVALID_INPUT_VALUE;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(ec, "필수 헤더가 누락되었습니다: " + e.getHeaderName()));
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException e) {

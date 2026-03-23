@@ -7,6 +7,9 @@ import com.koesc.ci_cd_test_app.api.request.PaymentRequestDTO;
 import com.koesc.ci_cd_test_app.api.response.PaymentResponseDTO;
 import com.koesc.ci_cd_test_app.business.PaymentService;
 import com.koesc.ci_cd_test_app.domain.Payment;
+import com.koesc.ci_cd_test_app.global.gateway.GatewayHeaders;
+import com.koesc.ci_cd_test_app.global.gateway.PassportCodec;
+import com.koesc.ci_cd_test_app.global.gateway.UserPassport;
 import com.koesc.ci_cd_test_app.implement.idempotency.IdempotencyManager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,14 +32,16 @@ public class PaymentController {
     /**
      * 결제 요청 생성.
      * 응답의 orderId, amount를 클라이언트가 TossPayments SDK에 전달해야 한다.
-     * X-User-Id: SCG에서 전달하는 인증된 사용자 ID
+     * Auth-Passport: SCG가 JWT 검증 후 주입하는 인증 컨텍스트 (ADR-0007 Phase 2)
      * Idempotency-Key: 클라이언트가 생성하는 고유 키 (UUID 권장)
      */
     @PostMapping("/request")
     public ResponseEntity<PaymentResponseDTO> requestPayment(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(GatewayHeaders.AUTH_PASSPORT) String passportHeader,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentRequestDTO request) {
+
+        Long userId = extractUserId(passportHeader);
 
         Optional<String> cached = idempotencyManager.startProcessing(idempotencyKey);
         if (cached.isPresent()) {
@@ -117,5 +122,10 @@ public class PaymentController {
             log.warn("Failed to deserialize idempotency cache, proceeding without cache", e);
             return null;
         }
+    }
+
+    private static Long extractUserId(String passportHeader) {
+        UserPassport passport = PassportCodec.decode(passportHeader);
+        return Long.parseLong(passport.userId());
     }
 }
