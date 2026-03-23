@@ -15,7 +15,6 @@ reviewer: ""
 - [Observability](#observability)
 - [Trade-offs](#trade-offs)
 - [Planned Improvements](#planned-improvements)
-- [Interview Explanation (90s version)](#interview-explanation-90s-version)
 
 # Seat Locking Design: booking-app 좌석 선점 및 예약 확정
 
@@ -327,13 +326,3 @@ planned:
 6. **outbox 패턴** (proposed): 예약 이벤트를 outbox 테이블에 저장하고, 이벤트 기반으로 concert-app에 전달. 현재 동기 HTTP 호출의 단일 장애점 문제 해소.
 
 ---
-
-## Interview Explanation (90s version)
-
-> booking-app의 핵심 설계 문제는 동시성과 TTL입니다. 수천 명이 동시에 같은 좌석을 선점하려 할 때, concert-app의 SeatEntity에 @Version을 붙여 낙관적 락으로 처리합니다. 선점 성공은 1명뿐이고, 나머지는 409를 받아 다른 좌석을 선택합니다. 비관적 락(SELECT FOR UPDATE) 대신 낙관적 락을 선택한 이유는 처리량 때문입니다. 비관적 락은 한 명이 처리되는 동안 나머지를 DB에서 대기시키지만, 낙관적 락은 충돌 시점에만 실패를 반환하므로 DB 부하가 낮습니다.
->
-> 예약 TTL은 5분입니다. 결제를 완료하지 않으면 5분 후 만료 처리가 좌석을 HOLD에서 AVAILABLE로 되돌립니다. 결제 confirm이 만료 직전에 들어오는 경합 시나리오는 validateConfirmable과 validateExpirable이 각각 PENDING + not expired 조건을 검증해 처리합니다. 만료가 먼저 처리되면 payment-app이 booking confirm 실패를 받고 자동 환불 보상 트랜잭션을 실행합니다.
-
----
-
-*최종 업데이트: 2026-03-16 | ReservationManager.java, SeatHolder.java, ReservationEntity.java 기준*

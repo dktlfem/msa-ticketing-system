@@ -25,7 +25,6 @@ reviewer: ""
 - [Payment Confirm 심화: Recovery / Mitigation](#payment-confirm-심화-recovery--mitigation)
 - [Payment Confirm 심화: Trade-offs](#payment-confirm-심화-trade-offs)
 - [Step-by-step: 사용자 결제 불만 접수 시 추적 절차](#step-by-step-사용자-결제-불만-접수-시-추적-절차)
-- [Interview Explanation (90s version)](#interview-explanation-90s-version)
 
 # Observability: 시스템 전체 관측성 설계
 
@@ -820,19 +819,3 @@ redis-cli -h 192.168.124.101 -p 6379 GET "payment:idempotency:{idempotencyKey}"
 `(nil)` → 24h 이내에 요청한 적 없거나 TTL 만료.
 
 ---
-
-## Interview Explanation (90s version)
-
-"결제 confirm 흐름은 TossPayments 외부 API 호출, booking-app 내부 API 호출, Redis idempotency 체크, DB 상태 전이가
-하나의 요청 안에 순차적으로 얽혀 있습니다. 이 구간을 관측하기 위해 세 가지 시그널을 연결했습니다.
-
-첫째, 로그에는 Micrometer Tracing이 자동으로 주입하는 traceId와, SCG가 생성해 헤더로 전파하는 correlationId를
-함께 출력합니다. 이 둘은 서로 다른 시스템에서 만들어지며 목적도 다릅니다. traceId는 Jaeger 구간 연결에,
-correlationId는 Kibana 게이트웨이 로그 검색에 씁니다.
-
-둘째, PaymentManager의 로그는 결제 생성부터 PG 호출, DB 업데이트, booking confirm까지 각 단계를 명시적으로 기록합니다.
-CANCEL_FAILED처럼 고객 돈이 묶이는 상황은 [CRITICAL] 프리픽스로 표시해 Kibana 알림으로 즉시 탐지합니다.
-
-셋째, DB의 idx_status 인덱스를 통해 CANCEL_FAILED나 장기 READY 상태를 SQL로 직접 조회합니다.
-
-Jaeger OTLP 연동은 home-staging에서 구현 완료 상태입니다. payment confirm span에서 PG 응답 시간과 booking-app 호출 실패 위치를 한 눈에 볼 수 있습니다."
