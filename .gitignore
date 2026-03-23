@@ -45,3 +45,9 @@ src/**/.DS_Store
 .gradle/
 build/
 .DS_Store
+
+docs/_reports/
+
+### Claude Code ###
+.claude/
+CLAUDE.md
