@@ -1,7 +1,25 @@
+---
+title: "Capacity Planning"
+last_updated: 2026-03-18
+author: "민석"
+reviewer: ""
+---
+
+## 목차
+- [Background](#background)
+- [Problem](#problem)
+- [Current Design](#current-design)
+- [Measurement / Validation](#measurement-validation)
+- [Failure / Bottleneck Scenarios](#failure-bottleneck-scenarios)
+- [Trade-offs](#trade-offs)
+- [Scale-up / Scale-out 판단 기준](#scale-up-scale-out-판단-기준)
+- [Planned Improvements](#planned-improvements)
+- [Interview Explanation (90s version)](#interview-explanation-90s-version)
+
 # Capacity Planning
 
 > 이 문서는 현재 self-hosted staging 환경의 **실제 리소스 한계와 병목 예상**을 기준으로 작성합니다.
-> 인프라 토폴로지: [`docs/02-architecture-infrastructure.md`](../02-architecture-infrastructure.md)
+> 인프라 토폴로지: [`docs/architecture/system-overview.md`](../architecture/system-overview.md)
 > SLI/SLO 목표값: [`docs/performance/sli-slo.md`](./sli-slo.md)
 > 장애 대응: [`docs/operations/incident-runbook.md`](../operations/incident-runbook.md)
 
@@ -19,7 +37,7 @@
 
 ## Problem
 
-"이 시스템은 확장 가능합니다"라는 주장의 근거가 없으면 면접에서 반박당합니다. 다음 질문에 구체적으로 답할 수 있어야 합니다.
+"이 시스템은 확장 가능합니다"라는 주장은 구체적인 수치 근거가 뒷받침되어야 합니다. 다음 질문에 구체적으로 답할 수 있어야 합니다.
 
 - **어디가 먼저 병목이 됩니까?**
 - **현재 Redis가 단일 노드인데 장애 시 어떻게 됩니까?**
@@ -36,7 +54,7 @@
 |----------|---------|------|
 | Redis 노드 | 단일 노드 (192.168.124.101:6379) | application.properties |
 | Redis Lettuce pool | max-active=20, max-idle=10 (서비스당) | application.properties |
-| MySQL 인스턴스 | 단일 (192.168.124.100:33066) | application.properties |
+| MySQL 인스턴스 | 단일 (컨테이너 내부 `mysql:3306`, 호스트 포트 미노출) | docker-compose.yml |
 | HikariCP 커넥션 풀 | 기본값 ~10 (서비스당) | 명시적 설정 없음 |
 | Tomcat 스레드 풀 | 기본값 ~200 (서비스당) | 명시적 설정 없음 |
 | TossPayments 타임아웃 | connect 3s, read 10s | RestClientConfig.java |
@@ -165,6 +183,50 @@ SHOW STATUS LIKE 'Innodb_row_lock_waits';
 SHOW STATUS LIKE 'Innodb_row_lock_time_avg';
 ```
 
+### 시나리오 D: user-app 부하 특성 분석
+
+user-app은 다른 서비스와 다른 부하 패턴을 가진다.
+
+```
+user-app 부하 특성:
+  └── 외부 서비스 호출 없음 (leaf service)
+  └── Redis 미사용 → Redis 장애로부터 완전 독립
+  └── 주요 쿼리: existsByEmail (UK 인덱스), findById (PK)
+  └── 병목 원인: 오직 DB 커넥션(HikariCP) + Tomcat 스레드
+```
+
+**user-app 고부하 시나리오 (향후 로그인 API 구현 시)**:
+
+| 상황 | 병목 | 추정 영향 |
+|------|------|---------|
+| 대규모 이벤트 오픈 전 동시 회원 가입 폭증 | Tomcat 스레드(200) + HikariCP(~10) | 동시 가입 10건 초과 시 커넥션 대기 |
+| BCrypt 해싱 추가 후 (planned) | CPU 집약적 해싱(~100ms/요청) | Tomcat 스레드 점유 시간 증가 → 처리량 감소 |
+| 로그인 API 추가 후 JWT 검증 집중 | 현재는 SCG가 검증 담당 → user-app 직접 부하 없음 | — |
+
+**BCrypt 도입 시 용량 계산 예시**:
+- BCrypt cost factor 10: 해싱 약 100ms/요청
+- Tomcat 스레드 200개 기준 동시 처리 가능 가입 요청: 200 / 0.1s = 약 2,000 TPS 이론값
+- 단, HikariCP 기본 10 커넥션 = 실질 병목은 **10 TPS** (DB 쓰기 대기)
+- HikariCP `maximumPoolSize`를 50으로 늘리면 ~50 TPS까지 가능
+
+```
+BCrypt 도입 전/후 비교:
+  현재 (평문 저장):  HikariCP 10 커넥션 = 약 10 TPS 한계
+  BCrypt 추가 후:    CPU 100ms 해싱 추가 → 스레드 점유 증가, HikariCP 병목은 동일
+  → HikariCP 확장이 BCrypt 도입 전에 선행되어야 함
+```
+
+**user-app 용량 권장 설정**:
+```properties
+# 현재 (기본값 사용)
+# spring.datasource.hikari.maximum-pool-size=10
+
+# user-app 권장 (회원 가입 집중 이벤트 대비)
+spring.datasource.hikari.maximum-pool-size=30
+spring.datasource.hikari.connection-timeout=3000
+spring.datasource.hikari.idle-timeout=300000
+```
+
 ---
 
 ## Trade-offs
@@ -243,13 +305,59 @@ SHOW STATUS LIKE 'Innodb_row_lock_time_avg';
 
 | 개선 항목 | 우선순위 | 근거 |
 |----------|---------|------|
-| HikariCP 명시적 설정 (maximumPoolSize, connectionTimeout) | 높음 | 기본값 10으로 동시 결제 처리 한계 |
+| HikariCP 명시적 설정 (maximumPoolSize, connectionTimeout) | 높음 | 기본값 10으로 동시 결제 처리 한계. user-app도 동일하게 30으로 증가 권장 |
 | payment-app Tomcat thread pool 증가 또는 비동기 전환 | 높음 | TossPayments 10s 동기 호출 스레드 점유 |
 | Redis Sentinel 구성 | 중간 | 단일 노드 장애 시 대기열/idempotency 기능 중단 |
-| MySQL HikariCP per-service 튜닝 | 중간 | 서비스별 부하 패턴이 다름 |
+| MySQL HikariCP per-service 튜닝 | 중간 | 서비스별 부하 패턴이 다름 (user-app: 낮은 부하, payment-app: 높은 부하) |
 | TossPayments 웹훅 수신 | 중간 | 타임아웃 시 READY 상태 결제 자동 해소 |
+| user-app BCrypt 도입 후 스레드 점유 재측정 | 중간 | BCrypt cost 10 → ~100ms/요청 CPU 점유. Tomcat 유효 TPS 재산정 필요 |
 | MySQL Read Replica (concert-app) | 낮음 | 공연/좌석 조회 read-heavy, write는 seat HOLD만 |
 | AWS RDS + ElastiCache 전환 | 낮음 (staging 이후) | 관리형 서비스로 운영 부담 감소 |
+
+---
+
+## 비용 계획 (Cost Planning)
+
+> 아래 표는 인프라 구성 요소별 월 비용 추정 구조 템플릿이다. 구체적인 금액은 실제 AWS 견적 및 전력 비용 측정 후 채워야 한다.
+> staging 환경(홈서버 + 미니PC)과 production 환경(AWS)을 분리해서 추적한다.
+
+### Staging 환경 비용 (홈서버 기반)
+
+| 구성 요소 | 사양 | 월 비용 추정 | 비고 |
+|----------|------|------------|------|
+| 메인 서버 (WSL2 Docker Compose) | RAM 128GB | ₩ (전기료 기준) | 192.168.124.100, 모든 서비스 + 인프라 컨테이너 포함 |
+| Redis 전용 미니PC (에코비 A1 N100) | RAM 16GB | ₩ (전기료 기준) | 192.168.124.101, Redis 단독 운영 |
+| OpenVPN (NAS or 라우터) | — | ₩ 0 (자체 구성) | 외부 접근용 |
+| 합계 (staging) | — | ₩ | |
+
+### Production 환경 비용 추정 (AWS)
+
+| 구성 요소 | 타입 / 사양 | 수량 | 월 비용 추정 (USD) | 월 비용 추정 (KRW) | 비고 |
+|----------|-----------|------|--------------------|-------------------|------|
+| EC2 (각 마이크로서비스 인스턴스) | t3.small (2vCPU, 2GB) | 6 | $ | ₩ | scg, booking, payment, concert, waitingroom, user |
+| EC2 (Nginx Blue/Green) | t3.micro | 2 | $ | ₩ | Blue/Green 각 1대 |
+| RDS MySQL | db.t3.micro (단일 AZ) | 1 | $ | ₩ | 5개 스키마 공유; 운영 전환 시 Multi-AZ 검토 |
+| ElastiCache Redis | cache.t3.micro | 1 | $ | ₩ | 현재 미니PC 대체; Sentinel 구성 시 추가 비용 |
+| ALB (Application Load Balancer) | — | 1 | $ | ₩ | SCG 앞단 |
+| EBS (각 EC2 볼륨) | gp3 20GB | 8 | $ | ₩ | |
+| S3 (로그/스냅샷 아카이브) | — | — | $ | ₩ | Grafana/Kibana 스냅샷, slow query 보관 |
+| 데이터 전송 (외부 아웃바운드) | — | — | $ | ₩ | TossPayments API 호출 포함 |
+| **합계 (production)** | | | **$** | **₩** | |
+
+### 비용 최적화 포인트 (planned)
+
+| 항목 | 현재 | 최적화 방향 | 예상 절감 |
+|------|------|-----------|---------|
+| EC2 On-Demand → Reserved Instance | On-Demand | 1년 약정 RI (t3.small) | 약 30~40% 절감 |
+| RDS Single-AZ → Multi-AZ (운영 이후) | Single-AZ | 장애 허용성 향상, 비용 약 2배 | — (비용 증가, 안정성 투자) |
+| Redis ElastiCache → Sentinel 2-node | 단일 노드 | 가용성 향상, 비용 약 2배 | — (비용 증가, 안정성 투자) |
+| 서비스별 EC2 → Fargate (장기) | EC2 고정 비용 | 요청 기반 과금, 피크 외 절감 | 트래픽 패턴에 따라 상이 |
+
+### 비용 추적 기준
+
+- **측정 주기**: 월 1회 AWS Cost Explorer 확인
+- **알람 기준**: 월 예산 대비 80% 도달 시 Billing Alert 설정
+- **스케일 트리거**: EC2 CPU 70% 지속 1시간 이상 또는 RDS IOPS 제한 도달 시 스펙 업그레이드 검토
 
 ---
 
@@ -259,4 +367,4 @@ SHOW STATUS LIKE 'Innodb_row_lock_time_avg';
 
 ---
 
-*최종 업데이트: 2026-03-16 | application.properties, RestClientConfig.java 기준*
+*최종 업데이트: 2026-03-19 | 비용 계획 섹션 추가*

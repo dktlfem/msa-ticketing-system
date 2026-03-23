@@ -1,0 +1,349 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_K6_INFLUXDB",
+      "label": "k6-influxdb",
+      "description": "InfluxDB 1.8 datasource for k6 results",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    }
+  ],
+  "id": null,
+  "uid": null,
+  "title": "SCG k6 Load Test",
+  "description": "SCG Hardening k6 부하테스트 결과. testid로 시나리오별, run_date로 실행일별 필터링.",
+  "tags": ["k6", "load-test", "scg"],
+  "schemaVersion": 39,
+  "version": 0,
+  "editable": true,
+  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "Asia/Seoul",
+  "refresh": "",
+  "templating": {
+    "list": [
+      {
+        "name": "testid",
+        "label": "Scenario",
+        "type": "query",
+        "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+        "query": "SHOW TAG VALUES FROM \"http_reqs\" WITH KEY = \"testid\"",
+        "definition": "SHOW TAG VALUES FROM \"http_reqs\" WITH KEY = \"testid\"",
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "multi": false,
+        "current": {}
+      },
+      {
+        "name": "run_date",
+        "label": "Run Date",
+        "type": "query",
+        "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+        "query": "SHOW TAG VALUES FROM \"http_reqs\" WITH KEY = \"run_date\"",
+        "definition": "SHOW TAG VALUES FROM \"http_reqs\" WITH KEY = \"run_date\"",
+        "refresh": 2,
+        "sort": 2,
+        "includeAll": true,
+        "multi": false,
+        "current": {}
+      }
+    ]
+  },
+  "annotations": { "list": [] },
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "id": 1,
+      "title": "Total Requests",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "thresholds": { "steps": [{ "color": "text", "value": null }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["sum"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Allowed",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": { "steps": [{ "color": "green", "value": null }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["sum"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT sum(\"value\") FROM \"allowed_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Rate Limited (429)",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "thresholds": { "steps": [{ "color": "orange", "value": null }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["sum"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT sum(\"value\") FROM \"rate_limited_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Unexpected Errors",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["sum"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT sum(\"value\") FROM \"unexpected_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "429 Rate",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.3 }, { "color": "red", "value": 0.7 }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["mean"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT mean(\"value\") FROM \"rate_limited_rate\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "Peak VUs",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "thresholds": { "steps": [{ "color": "purple", "value": null }] }
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["max"] } },
+      "targets": [{ "refId": "A", "rawQuery": true, "resultFormat": "table",
+        "query": "SELECT max(\"value\") FROM \"vus\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter"
+      }]
+    },
+
+    {
+      "type": "row",
+      "id": 101,
+      "title": "Virtual Users & Throughput",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "timeseries",
+      "id": 10,
+      "title": "Virtual Users",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "custom": { "drawStyle": "line", "fillOpacity": 25, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "axisLabel": "VUs" }
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "refId": "A", "alias": "VUs", "rawQuery": true, "resultFormat": "time_series",
+        "query": "SELECT mean(\"value\") FROM \"vus\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(previous)"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Requests per Second",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "axisLabel": "req/s" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Allowed" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Rate Limited" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Total" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "alias": "Total", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" },
+        { "refId": "B", "alias": "Allowed", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"allowed_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" },
+        { "refId": "C", "alias": "Rate Limited", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"rate_limited_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" }
+      ]
+    },
+
+    {
+      "type": "row",
+      "id": 102,
+      "title": "Latency",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
+    },
+    {
+      "type": "timeseries",
+      "id": 20,
+      "title": "http_req_duration (P50 / P95 / P99)",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "drawStyle": "line", "fillOpacity": 8, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "axisLabel": "ms" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "P50" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P95" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P99" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }, { "id": "custom.lineWidth", "value": 3 }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "alias": "P50", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 50) FROM \"http_req_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" },
+        { "refId": "B", "alias": "P95", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 95) FROM \"http_req_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" },
+        { "refId": "C", "alias": "P99", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 99) FROM \"http_req_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 21,
+      "title": "Allowed vs Blocked Latency (P50 / P95)",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "axisLabel": "ms" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Allowed P95" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Blocked P95" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Allowed P50" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }, { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }, { "id": "custom.fillOpacity", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "Blocked P50" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }, { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }, { "id": "custom.fillOpacity", "value": 0 }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "alias": "Allowed P95", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 95) FROM \"allowed_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" },
+        { "refId": "B", "alias": "Blocked P95", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 95) FROM \"blocked_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" },
+        { "refId": "C", "alias": "Allowed P50", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 50) FROM \"allowed_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" },
+        { "refId": "D", "alias": "Blocked P50", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT percentile(\"value\", 50) FROM \"blocked_duration\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)" }
+      ]
+    },
+
+    {
+      "type": "row",
+      "id": 103,
+      "title": "Rate Limiter Detail",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "type": "timeseries",
+      "id": 30,
+      "title": "Allowed vs Rate Limited (Stacked)",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 80, "lineWidth": 0, "showPoints": "never", "stacking": { "group": "A", "mode": "normal" }, "axisLabel": "count" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Allowed" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Rate Limited" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Unexpected" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "alias": "Allowed", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"allowed_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" },
+        { "refId": "B", "alias": "Rate Limited", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"rate_limited_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" },
+        { "refId": "C", "alias": "Unexpected", "rawQuery": true, "resultFormat": "time_series",
+          "query": "SELECT sum(\"value\") FROM \"unexpected_count\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(0)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "id": 31,
+      "title": "429 Rate Over Time (%)",
+      "datasource": { "type": "influxdb", "uid": "${DS_K6_INFLUXDB}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "custom": {
+            "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "axisLabel": "%",
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.5 }] }
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "refId": "A", "alias": "Rate Limited %", "rawQuery": true, "resultFormat": "time_series",
+        "query": "SELECT mean(\"value\") FROM \"rate_limited_rate\" WHERE (\"testid\" =~ /^$testid$/) AND (\"run_date\" =~ /^$run_date$/) AND $timeFilter GROUP BY time($__interval) fill(none)"
+      }]
+    }
+  ]
+}

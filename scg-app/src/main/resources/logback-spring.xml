@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        spring.application.name을 모든 로그 이벤트에 포함.
+        LogstashEncoder가 자동으로 appName 필드로 출력.
+    -->
+    <springProperty scope="context" name="appName"
+                    source="spring.application.name" defaultValue="scg"/>
+
+    <!--
+        ─── Console Appender (JSON) ───────────────────────────────────────────
+        LogstashEncoder는 MDC 전체 필드(requestId, traceId, spanId)를
+        자동으로 JSON 필드로 포함.
+    -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!--
+        ─── App File Appender ─────────────────────────────────────────────────
+        일반 애플리케이션 로그. 7일 보관.
+    -->
+    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!--
+        ─── Audit File Appender ───────────────────────────────────────────────
+        감사 로그 전용. 30일 보관 (일반 로그보다 긴 보존 기간).
+        인증된 사용자의 행위 기록으로 컴플라이언스/보안 감사에 활용.
+    -->
+    <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/audit.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}","log_type":"audit"}</customFields>
+        </encoder>
+    </appender>
+
+    <!--
+        ─── Audit Logger ──────────────────────────────────────────────────────
+        AuditLogFilter가 LoggerFactory.getLogger("audit.log")로 이 logger를 사용.
+        additivity=false: root logger로 전파하지 않아 app.log에 중복 기록 방지.
+    -->
+    <logger name="audit.log" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_FILE"/>
+    </logger>
+
+    <!-- ─── Redis / RateLimiter 디버그 (임시) ──────────────────────────── -->
+    <logger name="org.springframework.cloud.gateway.filter.ratelimit" level="DEBUG"/>
+    <logger name="org.springframework.data.redis" level="DEBUG"/>
+    <logger name="io.lettuce.core" level="DEBUG"/>
+
+    <!--
+        ─── Root Logger ───────────────────────────────────────────────────────
+        INFO 레벨. CONSOLE + APP_FILE 출력.
+        Reactor 내부 로그(DEBUG)는 제외.
+    -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="APP_FILE"/>
+    </root>
+
+</configuration>

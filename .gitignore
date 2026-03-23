@@ -48,6 +48,21 @@ build/
 
 docs/_reports/
 
+### k6 부하테스트 결과물 (실행 결과이므로 추적 불필요)
+load-test/scripts/k6/results/
+
+### ChatGPT 공유용 프로젝트 압축 파일
+아카이브/
+
+### Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+### macOS 메타파일
+.DS_Store
+**/.DS_Store
+
 ### Claude Code ###
 .claude/
 CLAUDE.md

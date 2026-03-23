@@ -21,12 +21,41 @@ dependencies {
     // 게이트웨이(라우팅)
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
 
+    // Redis Rate Limiter (ADR-0003: LocalRateLimiter → RedisRateLimiter 전환)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
     // 헬스/메트릭(모니터링)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
-    // 추후 트레이싱 하고 싶으면 추가
-    // implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    // CircuitBreaker / Retry
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+
+    // Bulkhead (Phase 4) — resilience4j-circuitbreaker와 별도 모듈, BOM이 버전 관리
+    implementation 'io.github.resilience4j:resilience4j-bulkhead'
+
+    // JWT 검증 (Phase 4) — JJWT 0.12.x, BOM 미관리이므로 버전 명시
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // OpenTelemetry (Phase 5) — Spring Boot BOM이 버전 관리
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+
+    // Structured Logging (Phase 5) — BOM 비관리, 버전 명시
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+}
+
+// 테스트
+dependencies {
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    // JWT 생성 (테스트에서 직접 토큰 생성)
+    testImplementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 bootJar {

@@ -1,0 +1,224 @@
+server:
+  port: 8080
+  # Graceful Shutdown: 진행 중인 요청이 완료될 때까지 최대 30s 대기 후 종료
+  shutdown: graceful
+
+spring:
+  application:
+    name: scg
+  main:
+    web-application-type: reactive
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:192.168.124.101}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+  cloud:
+    gateway:
+      # ─── Body Size 제한 ─────────────────────────────────────────────
+      default-filters:
+        - name: RequestSize
+          args:
+            maxSize: 5MB
+      routes:
+        - id: user-service
+          uri: http://user-app:8080
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@remoteAddrKeyResolver}"
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 50
+                redis-rate-limiter.requestedTokens: 1
+            # CB(outer) → Retry(inner): CB가 open이면 retry 없이 즉시 fallback
+            - name: CircuitBreaker
+              args:
+                name: user-service-cb
+                fallbackUri: forward:/fallback/service-unavailable
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,HEAD   # POST 제외 — 비멱등 요청 재시도 금지
+                series: SERVER_ERROR
+                exceptions:
+                  - java.net.ConnectException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
+        - id: concert-service
+          uri: http://concert-app:8080
+          predicates:
+            - Path=/api/v1/events/**,/api/v1/schedules/**,/api/v1/seats/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@remoteAddrKeyResolver}"
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 50
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: concert-service-cb
+                fallbackUri: forward:/fallback/service-unavailable
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,HEAD
+                series: SERVER_ERROR
+                exceptions:
+                  - java.net.ConnectException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
+        - id: waitingroom-service
+          uri: http://waitingroom-app:8080
+          predicates:
+            - Path=/api/v1/waiting-room/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@remoteAddrKeyResolver}"
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: waitingroom-service-cb
+                fallbackUri: forward:/fallback/service-unavailable
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,HEAD
+                series: SERVER_ERROR
+                exceptions:
+                  - java.net.ConnectException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
+        - id: payment-service
+          uri: http://payment-app:8080
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@remoteAddrKeyResolver}"
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+            # payment-service-cb: waitDurationInOpenState=30s (Resilience4jConfig에서 override)
+            - name: CircuitBreaker
+              args:
+                name: payment-service-cb
+                fallbackUri: forward:/fallback/service-unavailable
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+            # GET /api/v1/payments/{paymentId} (상태 조회) 에만 재시도 적용
+            # POST /confirm, /request, /cancel 은 methods 제한으로 재시도 없음
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,HEAD
+                series: SERVER_ERROR
+                exceptions:
+                  - java.net.ConnectException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  # CircuitBreaker 상태를 /actuator/health 에 노출 (UP/CIRCUIT_BREAKER_OPEN 등)
+  health:
+    circuitbreakers:
+      enabled: true
+  # ─── Distributed Tracing ──────────────────────────────────────────
+  tracing:
+    sampling:
+      probability: 1.0   # 개발 환경 전체 수집. 운영 환경에서는 0.1~0.3 권장
+  otlp:
+    tracing:
+      # 운영 환경: OTEL_EXPORTER_OTLP_ENDPOINT 환경변수로 오버라이드
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4318/v1/traces}
+
+# ─── Security Layer ─────────────────────────────
+gateway:
+  security:
+    headers:
+      content-security-policy: "default-src 'self'"
+    cors:
+      allowed-origin-patterns: "http://localhost:3000,http://localhost:8080"
+    internal-block-patterns: "/internal/**"
+
+    # ─── Request Sanitize ────────────────────────────────────────────
+    # 클라이언트가 위조해서는 안 되는 내부 인증 헤더 제거 대상 (ADR-0007 Phase 3)
+    sanitize-headers:
+      - Auth-Passport
+      - Auth-User-Id
+      - Internal-Token
+
+    # ─── JWT Authentication ──────────────────────────────────────────
+    # jwt-secret: 최소 32바이트(256bit). 운영 환경에서는 환경변수로 주입할 것.
+    jwt-secret: "change-me-in-production-must-be-at-least-32-bytes!!"
+    excluded-paths:
+      - /actuator/**
+      - /fallback/**
+
+  # ─── Rate Limiter ─────────────────────────────────────────────────
+  # ADR-0003: RedisRateLimiter로 전환. 설정은 각 route의 redis-rate-limiter.* 인라인으로 이동.
+  # 이전 LocalRateLimiter 설정 (참고용):
+  #   default-replenish-rate: 30, default-burst-capacity: 50
+  #   routes: waitingroom-service(100/200), payment-service(5/10)
+
+  # ─── Bulkhead ──────────────────────────────────────────────────────
+  bulkhead:
+    default-max-concurrent-calls: 20
+    routes:
+      payment-service: 10
+
+  # ─── Log Masking ───────────────────────────────────────────────────
+  logging:
+    sensitive-headers:
+      - Cookie
+      - X-Api-Key
+      - X-Auth-Token

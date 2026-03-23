@@ -1,3 +1,21 @@
+---
+title: "Data Retention & Privacy: 데이터 보유·삭제·최소화 원칙"
+last_updated: 2026-03-18
+author: "민석"
+reviewer: ""
+---
+
+## 목차
+- [Background](#background)
+- [Problem](#problem)
+- [Current Design](#current-design)
+- [Risks](#risks)
+- [Controls / Mitigations](#controls-mitigations)
+- [Planned Improvements](#planned-improvements)
+- [Trade-offs](#trade-offs)
+- [Failure Scenarios](#failure-scenarios)
+- [Interview Explanation (90s version)](#interview-explanation-90s-version)
+
 # Data Retention & Privacy: 데이터 보유·삭제·최소화 원칙
 
 > **범위**: 이 문서는 서비스별 데이터 분류, 보유 기간 원칙, 로그/메트릭에서 제외해야 할 민감 정보, `pg_response_raw` 저장의 주의점을 다룬다.
@@ -100,7 +118,7 @@ Payment approved - paymentId=50001, orderId=RES90001_1710567600123
 | 메트릭 | 허용 여부 | 근거 |
 |--------|---------|------|
 | `http_server_requests_seconds{status=..., uri=...}` | 허용 | URI와 상태코드만 포함 |
-| `payment.approved` counter | 허용 | 집계 수치, 개인 식별 없음 |
+| `payment_confirm_total{result="success/pg_error/..."}` counter | 허용 | 집계 수치, 개인 식별 없음 <!-- 2026-03-18 메트릭 명칭 통일 --> |
 | `userId` label이 포함된 메트릭 | **금지** | userId가 메트릭 label이 되면 카디널리티 폭발 + PII 노출 |
 | `orderId` label이 포함된 메트릭 | **금지** | 개별 트랜잭션 식별 가능 |
 
@@ -127,7 +145,7 @@ Payment approved - paymentId=50001, orderId=RES90001_1710567600123
 
 현재 스테이징 환경:
 - IP: 192.168.124.100 (WSL2 + Docker Compose)
-- MySQL: 포트 33066, 인증 `root / ${SPRING_DATASOURCE_PASSWORD:1234}`
+- MySQL: 컨테이너 내부 `mysql:3306` (호스트 포트 미노출), 인증 `root / ${SPRING_DATASOURCE_PASSWORD:1234}`
 - Redis: 192.168.124.101:6379, VPN 내부망
 
 **알려진 한계**:

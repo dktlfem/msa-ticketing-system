@@ -1,3 +1,22 @@
+---
+title: "Queue Design: waitingroom-app 대기열 설계"
+last_updated: 2026-03-18
+author: "민석"
+reviewer: ""
+---
+
+## 목차
+- [Background](#background)
+- [Problem](#problem)
+- [Current Design](#current-design)
+- [State / Flow](#state-flow)
+- [Concurrency / Consistency Risks](#concurrency-consistency-risks)
+- [Failure Scenarios](#failure-scenarios)
+- [Observability](#observability)
+- [Trade-offs](#trade-offs)
+- [Planned Improvements](#planned-improvements)
+- [Interview Explanation (90s version)](#interview-explanation-90s-version)
+
 # Queue Design: waitingroom-app 대기열 설계
 
 > 이 문서는 waitingroom-app의 구조, Redis Sorted Set 기반 대기열 흐름, 토큰 생명주기, 장애 시나리오를 다룬다.

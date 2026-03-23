@@ -5,6 +5,9 @@ import com.koesc.ci_cd_test_app.business.ReservationService;
 import com.koesc.ci_cd_test_app.domain.Reservation;
 import com.koesc.ci_cd_test_app.domain.ReservationStatus;
 import com.koesc.ci_cd_test_app.global.error.GlobalExceptionHandler;
+import com.koesc.ci_cd_test_app.global.gateway.GatewayHeaders;
+import com.koesc.ci_cd_test_app.global.gateway.PassportCodec;
+import com.koesc.ci_cd_test_app.global.gateway.UserPassport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -38,11 +42,15 @@ public class ReservationControllerTest {
     @MockitoBean
     private ReservationService reservationService;
 
+    private static String passportFor(Long userId) {
+        return PassportCodec.encode(new UserPassport(
+                userId.toString(), List.of("USER"), null, 0L, "127.0.0.1"));
+    }
+
     @Test
     @DisplayName("예약 생성 성공 시 201 Created와 예약 정보를 반환한다")
     void createReservation_success() throws Exception {
 
-        // 1. given
         Long userId = 1L;
         String waitingToken = "token-123";
         Long seatId = 10L;
@@ -60,8 +68,8 @@ public class ReservationControllerTest {
                 .willReturn(reservation);
 
         mockMvc.perform(post("/api/v1/reservations")
-                        .header("X-User-Id", userId)
-                        .header("X-Waiting-Token", waitingToken)
+                        .header(GatewayHeaders.AUTH_PASSPORT, passportFor(userId))
+                        .header(GatewayHeaders.QUEUE_TOKEN, waitingToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -79,8 +87,8 @@ public class ReservationControllerTest {
     @DisplayName("예약 생성 시 seatId가 0 이하이면 400 Bad Request를 반환한다")
     void createReservation_ValidationFail() throws Exception {
         mockMvc.perform(post("/api/v1/reservations")
-                        .header("X-User-Id", 1L)
-                        .header("X-Waiting-Token", "token-123")
+                        .header(GatewayHeaders.AUTH_PASSPORT, passportFor(1L))
+                        .header(GatewayHeaders.QUEUE_TOKEN, "token-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -110,11 +118,42 @@ public class ReservationControllerTest {
                 .willReturn(cancelledReservation);
 
         mockMvc.perform(delete("/api/v1/reservations/{reservationId}", reservationId)
-                        .header("X-User-Id", userId))
+                        .header(GatewayHeaders.AUTH_PASSPORT, passportFor(userId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reservationId").value(999L))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
         verify(reservationService).cancelReservation(reservationId, userId);
+    }
+
+    @Test
+    @DisplayName("Auth-Passport 헤더가 없으면 401을 반환한다")
+    void missingPassport_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/reservations")
+                        .header(GatewayHeaders.QUEUE_TOKEN, "token-123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "seatId": 10
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("A001"));
+    }
+
+    @Test
+    @DisplayName("Auth-Passport 헤더가 깨진 Base64이면 401을 반환한다")
+    void invalidPassport_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/reservations")
+                        .header(GatewayHeaders.AUTH_PASSPORT, "not-valid-base64!!!")
+                        .header(GatewayHeaders.QUEUE_TOKEN, "token-123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "seatId": 10
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("A001"));
     }
 }
