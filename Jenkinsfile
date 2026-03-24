@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'TARGET_MODULE', 
-               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app'], 
+        choice(name: 'TARGET_MODULE',
+               choices: ['user-app', 'waitingroom-app', 'concert-app', 'booking-app', 'payment-app', 'scg-app'],
                description: '배포할 모듈을 선택하세요.')
     }
     
@@ -81,6 +81,10 @@ pipeline {
         }
         
         stage('Deploy to AWS EC2') {
+            // ADR: scg-app은 홈 스테이징 서버(192.168.124.100)에 배포하므로 EC2 배포 단계에서 제외
+            when {
+                expression { params.TARGET_MODULE != 'scg-app' }
+            }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'EC2-DEPLOY-KEY', keyFileVariable: 'KEY_FILE')]) {
                     script {
@@ -126,9 +130,6 @@ SPRING_REDIS_PASSWORD=${env.REDIS_PASSWORD}
                                 B=8089; G=8090
                             elif [ "\$MODULE_SHORT" = "payment" ]; then
                                 B=8091; G=8092
-                            else
-                                echo "Unsupported module: \$MODULE"
-                                exit 1
                             fi
 
                             if grep -A 10 "upstream \${MODULE_SHORT}_servers" nginx.conf | grep -q "server .*:\${B};"; then
@@ -167,6 +168,44 @@ SPRING_REDIS_PASSWORD=${env.REDIS_PASSWORD}
                     EOF
                     """.stripIndent())
                     }
+                }
+            }
+        }
+
+        stage('Deploy scg-app to Staging') {
+            // ADR: scg-app은 AWS EC2가 아닌 홈 스테이징 서버(192.168.124.100)에 배포
+            // - docker-compose.yml의 image명(devops_lab-scg:latest)을 유지하기 위해
+            //   Docker Hub에서 pull 후 로컬 태그로 재태그하여 compose 재시작
+            when {
+                expression { params.TARGET_MODULE == 'scg-app' }
+            }
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'STAGING-DEPLOY-KEY', keyFileVariable: 'STAGING_KEY')]) {
+                    sh("""\
+                        ssh -i \${STAGING_KEY} -o StrictHostKeyChecking=no -p 2222 dktlfem@192.168.124.100 'bash -s' <<'EOF'
+                        set -e
+
+                        cat ~/.docker_pass | docker login -u "\$(cat ~/.docker_user)" --password-stdin
+
+                        # Jenkins가 push한 이미지를 pull → devops_lab-scg:latest로 재태그
+                        docker pull ${env.DOCKER_IMAGE}:scg-app-${env.BUILD_NUMBER}
+                        docker tag ${env.DOCKER_IMAGE}:scg-app-${env.BUILD_NUMBER} devops_lab-scg:latest
+
+                        # docker-compose.yml이 있는 devops_lab 디렉토리에서 재시작
+                        cd /home/dktlfem/devops_lab
+                        docker compose up -d --no-deps scg
+
+                        # 30초 대기 후 컨테이너 기동 확인
+                        sleep 30
+                        if ! docker ps --format '{{.Names}}' | grep -qx "scg"; then
+                            echo "ERROR: scg container is not running"
+                            docker logs --tail 200 scg || true
+                            exit 1
+                        fi
+
+                        echo "--- scg-app Staging Deploy Success: Build ${env.BUILD_NUMBER} ---"
+                        EOF
+                    """.stripIndent())
                 }
             }
         }
