@@ -92,6 +92,40 @@ spring:
                   factor: 2
                   basedOnPreviousValue: false
 
+        - id: booking-service
+          uri: http://booking-app:8080
+          predicates:
+            - Path=/api/v1/reservations/**,/api/v1/users/me/reservations
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@remoteAddrKeyResolver}"
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: booking-service-cb
+                fallbackUri: forward:/fallback/service-unavailable
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,HEAD   # POST(예약 생성)은 비멱등 — 재시도 금지
+                series: SERVER_ERROR
+                exceptions:
+                  - java.net.ConnectException
+                  - java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
         - id: waitingroom-service
           uri: http://waitingroom-app:8080
           predicates:
