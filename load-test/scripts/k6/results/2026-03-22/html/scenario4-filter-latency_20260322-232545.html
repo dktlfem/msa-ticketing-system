@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG 필터 레이턴시 오버헤드 측정 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #1e40af; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
+  .card-val { font-size: 2rem; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>SCG 필터 체인 레이턴시 오버헤드 — 시나리오 4 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-22T14:25:45.404Z | SCG=http://192.168.124.100:8090 | Direct=http://192.168.124.100:8082</p>
+
+<h2>목적</h2>
+<p>9개 GlobalFilter + 3개 Route Filter가 추가하는 레이턴시 오버헤드를 정량화한다. "게이트웨이가 병목이 아닌 근거"를 수치로 확보한다.</p>
+
+<div class="grid">
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">SCG 필터 체인 오버헤드 P95</div>
+    <div class="card-val" style="color:#dc2626">26.5ms</div>
+    <div style="font-size:0.8rem;">목표 &lt;10ms 초과</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">직접 연결 실패 (Direct)</div>
+    <div class="card-val" style="color:#dc2626">FAIL</div>
+    <div style="font-size:0.8rem;">concert-app 직접 접근 불가</div>
+  </div>
+</div>
+
+<h2>레이턴시 비교</h2>
+<table>
+  <tr><th>경로</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th><th class="num">요청 수</th></tr>
+  <tr><td>SCG 경유 (필터 체인 포함)</td><td class="num">0.0ms</td><td class="num">26.5ms</td><td class="num">0.0ms</td><td class="num">901</td></tr>
+  <tr><td>직접 호출 (concert-app 직접)</td><td class="num">0.0ms</td><td class="num">0.0ms</td><td class="num">0.0ms</td><td class="num">0</td></tr>
+  <tr><td><strong>오버헤드 (SCG − Direct)</strong></td><td class="num"><strong>0.0ms</strong></td><td class="num fail"><strong>26.5ms</strong></td><td class="num"><strong>0.0ms</strong></td><td class="num">-</td></tr>
+</table>
+
+<h2>필터 체인 구성 (오버헤드 원인)</h2>
+<table>
+  <tr><th>필터</th><th>추정 오버헤드</th><th>근거</th></tr>
+  <tr><td>JwtAuthenticationFilter</td><td>~0.5ms</td><td>HMAC-SHA256 CPU 연산 (non-blocking)</td></tr>
+  <tr><td>RequestRateLimiter (Redis)</td><td>~1–3ms</td><td>Redis round-trip (로컬 네트워크)</td></tr>
+  <tr><td>RequestCorrelationFilter + Sanitize</td><td>~0.1ms</td><td>헤더 읽기/쓰기, MDC 설정</td></tr>
+  <tr><td>BulkheadFilter</td><td>&lt;0.1ms</td><td>tryAcquirePermission (AtomicInteger 연산)</td></tr>
+  <tr><td>AccessLogFilter + AuditLogFilter</td><td>~0.3ms</td><td>비동기 로그 큐 삽입</td></tr>
+  <tr><td>CircuitBreaker 상태 체크</td><td>&lt;0.1ms</td><td>in-memory 상태 조회</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>fl_direct_duration: p(95)&lt;500</td><td class="pass">PASS</td></tr>
+  <tr><td>fl_direct_success_rate: rate&gt;0.99</td><td class="fail">FAIL</td></tr>
+  <tr><td>fl_scg_success_rate: rate&gt;0.99</td><td class="pass">PASS</td></tr>
+  <tr><td>fl_scg_duration: p(95)&lt;500</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="diag">
+  <h3>Direct 연결 실패 — concert-app 직접 접근 불가 (요청 수 0건)</h3>
+  <ol>
+    <li>
+      <span class="cause">concert-app의 호스트 포트가 외부로 노출되지 않음</span>
+      <span class="how">확인: docker-compose.yml에서 concert-app의 ports 설정 추가 (예: "8082:8080")</span>
+    </li>
+    <li>
+      <span class="cause">DIRECT_BASE_URL 환경변수가 잘못 지정됨</span>
+      <span class="how">확인: k6 실행 시 --env DIRECT_BASE_URL=http://192.168.124.100:8082 정확히 지정</span>
+    </li>
+  </ol>
+</div>
+
+<div class="info">
+  <strong>설계 포인트 — SCG 필터 체인 오버헤드:</strong><br/>
+  오버헤드의 가장 큰 비중은 Redis round-trip(RequestRateLimiter ~1–3ms)입니다. 나머지 GlobalFilter들(JWT, Sanitize, CorrelationId 등)은
+  각각 0.1~0.5ms 이하의 인메모리 연산입니다. 전체 26.5ms 중 Redis 왕복 지연이 상당 부분을 차지하며,
+  Redis 서버가 동일 호스트에 있는 경우 &lt;1ms로 줄일 수 있습니다.
+</div>
+
+<p class="meta">Generated by k6 scenario4-filter-latency.js | rate=15req/s, duration=60s</p>
+</body>
+</html>

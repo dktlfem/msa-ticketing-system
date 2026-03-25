@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG Internal Block 검증 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #1e40af; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
+  .card-val { font-size: 2rem; font-weight: 700; }
+  code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-size: 0.82rem; line-height: 1.6; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>SCG Internal Block 검증 결과 — 시나리오 7 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-22T23:28:46.000Z | http://192.168.124.100:8090</p>
+
+<h2>목적</h2>
+<p>InternalPathBlockFilter(order=HIGHEST_PRECEDENCE+2)가 부하 중에도 <code>/internal/**</code> 경로를 100% 차단하는지 검증한다.
+정상 트래픽(10 req/s)과 내부 경로 공격(30 req/s)을 동시에 실행하여, bypass 건수가 단 한 건도 발생하지 않아야 한다.</p>
+
+<div class="grid">
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">/internal 차단율</div>
+    <div class="card-val" style="color:#dc2626">0.00%</div>
+    <div style="font-size:0.8rem;">4801건 전부 bypass — 목표 ≥99.9%</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">정상 트래픽 에러율</div>
+    <div class="card-val" style="color:#16a34a">0.00%</div>
+    <div style="font-size:0.8rem;">P95 0.0ms (정상 요청 0건)</div>
+  </div>
+</div>
+
+<h2>설정</h2>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>차단 대상</td><td>/internal/** (AntPathMatcher)</td></tr>
+  <tr><td>필터</td><td>InternalPathBlockFilter (GlobalFilter, order=HIGHEST_PRECEDENCE+2)</td></tr>
+  <tr><td>internal 공격 트래픽</td><td>30 req/s (constant-arrival-rate, 2분)</td></tr>
+  <tr><td>정상 트래픽</td><td>10 req/s (GET /api/v1/events/1, 2분)</td></tr>
+</table>
+
+<h2>InternalPathBlockFilter 차단 결과</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>총 /internal 요청</td><td class="num">4801</td><td>—</td><td>—</td></tr>
+  <tr><td>차단 (403) 수</td><td class="num">0</td><td>—</td><td>—</td></tr>
+  <tr><td>Bypass (비-403) 수</td><td class="num">4801</td><td>= 0</td><td class="fail">FAIL</td></tr>
+  <tr><td>차단율</td><td class="num">0.00%</td><td>≥ 99.9%</td><td class="fail">FAIL</td></tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th></tr>
+  <tr><td>차단 응답 (403)</td><td class="num">0.0ms</td><td class="num">22.0ms</td><td class="num">0.0ms</td></tr>
+  <tr><td>정상 트래픽 응답</td><td class="num">0.0ms</td><td class="num">0.0ms</td><td class="num">0.0ms</td></tr>
+</table>
+
+<h2>정상 트래픽 영향도</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>총 정상 요청</td><td class="num">0</td><td>—</td><td>—</td></tr>
+  <tr><td>에러율 (429 제외)</td><td class="num">0.00%</td><td>&lt; 1%</td><td class="pass">PASS</td></tr>
+  <tr><td>p95 응답시간</td><td class="num">0.0ms</td><td>&lt; 300ms</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>ib_internal_bypass: count == 0</td><td class="fail">FAIL</td></tr>
+  <tr><td>ib_block_rate: rate &ge; 0.999</td><td class="fail">FAIL</td></tr>
+  <tr><td>ib_block_duration: p(95) &lt; 50ms</td><td class="pass">PASS</td></tr>
+  <tr><td>ib_normal_error_rate: rate &lt; 0.01</td><td class="pass">PASS</td></tr>
+  <tr><td>ib_normal_duration: p(95) &lt; 300ms</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="diag">
+  <h3>CRITICAL: /internal/** bypass 4801건 감지</h3>
+  <ol>
+    <li>
+      <span class="cause">InternalPathBlockFilter 미등록 또는 order 설정 오류</span>
+      <span class="how">확인: scg-app GlobalFilter @Component 누락 여부, Order 값 확인 (HIGHEST_PRECEDENCE+2)</span>
+    </li>
+    <li>
+      <span class="cause">/internal/** 경로가 라우팅 테이블에 등록되어 필터 우회</span>
+      <span class="how">확인: application.yml routes에서 /internal/** predicates 제거 여부 확인</span>
+    </li>
+  </ol>
+</div>
+
+<div class="info">
+  <strong>설계 포인트 — InternalPathBlockFilter 실행 순서:</strong><br/>
+  InternalPathBlockFilter는 HIGHEST_PRECEDENCE+2로 JwtAuthenticationFilter(+4), RequestRateLimiter, BulkheadFilter보다 먼저 실행됩니다.
+  /internal/** 요청은 JWT 검증도, Redis rate-limit 호출도 없이 즉시 403 반환해야 합니다.
+  필터가 정상 동작 시 내부 API 경로 노출 없이 서비스 간 통신만 허용되는 제로-트러스트 구조가 완성됩니다.
+</div>
+
+<h2>검증 대상 경로</h2>
+<table>
+  <tr><th>경로</th><th>대상 서비스</th><th>설명</th></tr>
+  <tr><td><code>/internal/v1/reservations/1</code></td><td>booking-app</td><td>예약 내부 조회</td></tr>
+  <tr><td><code>/internal/v1/seats/1</code></td><td>concert-app</td><td>좌석 내부 조회</td></tr>
+  <tr><td><code>/internal/v1/waiting-room/tokens/validate</code></td><td>waitingroom-app</td><td>토큰 검증</td></tr>
+  <tr><td><code>/internal/v1/reservations/1/confirm</code></td><td>booking-app</td><td>예약 확정</td></tr>
+  <tr><td><code>/internal/v1/seats/1/hold</code></td><td>concert-app</td><td>좌석 선점</td></tr>
+</table>
+
+<h2>SCG GlobalFilter 실행 순서</h2>
+<pre>ORDER  필터                           동작
+──────────────────────────────────────────────────────────────────
++1    GatewayAccessLogGlobalFilter   요청 로그 기록 (모든 요청 통과)
++2    InternalPathBlockFilter  ◀◀◀  /internal/** → 403 즉시 반환, 이후 필터 실행 안 함
++3    RequestSanitizeFilter          Auth-User-Id 등 외부 유입 헤더 제거
++4    JwtAuthenticationFilter        JWT 검증 (internal path는 여기 도달하지 않음)
++5    CorrelationIdGlobalFilter      Correlation-Id 주입
++6    RequestRateLimiter             Redis 기반 rate limiting (internal path 미도달)
++7    BulkheadFilter                 동시 요청 제한 (internal path 미도달)
++8    CircuitBreaker                 서킷 브레이커 (internal path 미도달)</pre>
+
+<p class="meta">Generated by k6 scenario7-internal-block.js | internal=30req/s, normal=10req/s, duration=120s</p>
+</body>
+</html>

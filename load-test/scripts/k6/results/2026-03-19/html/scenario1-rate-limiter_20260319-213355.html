@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG Rate Limiter 검증 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+</style>
+</head>
+<body>
+<h1>SCG Rate Limiter 검증 결과 — 시나리오 1 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-19T12:33:55.524Z | http://192.168.124.100:8080</p>
+
+<h2>목적</h2>
+<p>payment-service route에 설정된 LocalRateLimiter(burst-capacity=10/s per IP)가 실제로 초과 트래픽을 429로 차단하는지 검증한다. 저트래픽(baseline) → 초과트래픽(burst) → 트래픽 감소(recovery) 3단계로 rate limiter의 차단/복구 동작을 확인한다.</p>
+
+<h2>설정</h2>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>rate-limiter</td><td>LocalRateLimiter (인메모리, 1초 고정 윈도)</td></tr>
+  <tr><td>burst-capacity</td><td>10 req/s (per IP)</td></tr>
+  <tr><td>key-resolver</td><td>remoteAddrKeyResolver (클라이언트 IP)</td></tr>
+  <tr><td>target</td><td>GET /api/v1/payments/1 (payment-service route)</td></tr>
+</table>
+
+<h2>Phase 구성</h2>
+<table>
+  <tr><th>Phase</th><th>VU</th><th>Duration</th><th>Sleep</th><th>목적</th></tr>
+  <tr><td>1. Baseline</td><td class="num">1</td><td>15s</td><td>500ms</td><td>burst-capacity 미만, 429 = 0% 확인</td></tr>
+  <tr><td>2. Burst</td><td class="num">15</td><td>30s</td><td>50ms</td><td>burst-capacity 초과, 429 &gt; 50% 확인</td></tr>
+  <tr><td>3. Recovery</td><td class="num">1</td><td>10s</td><td>500ms</td><td>윈도 리셋 후 복구 확인</td></tr>
+</table>
+
+<h2>결과</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>전체 요청</td><td class="num">7070</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 통과</td><td class="num">7069</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 차단 (429)</td><td class="num">0</td><td>-</td><td>-</td></tr>
+  <tr><td>비정상 응답</td><td class="num">0</td><td>&lt;5</td><td class="pass">PASS</td></tr>
+  <tr><td>429 차단율</td><td class="num">0.0%</td><td>&gt;50%</td><td class="fail">FAIL</td></tr>
+  <tr><td>평균 허용 TPS</td><td class="num">128.53 r/s</td><td>~10 r/s</td><td>-</td></tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th></tr>
+  <tr><td>429 차단 응답</td><td class="num">0.0ms</td><td class="num">0.0ms</td><td class="num">0.0ms</td></tr>
+  <tr><td>통과 응답</td><td class="num">0.0ms</td><td class="num">20.9ms</td><td class="num">0.0ms</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>rate_limited_rate{phase:baseline}: rate<0.01</td><td class="pass">PASS</td></tr><tr><td>blocked_duration: p(95)<50</td><td class="pass">PASS</td></tr><tr><td>rate_limited_rate{phase:recovery}: rate<0.05</td><td class="pass">PASS</td></tr><tr><td>unexpected_count: count<5</td><td class="pass">PASS</td></tr><tr><td>rate_limited_rate{phase:burst}: rate>0.50</td><td class="fail">FAIL</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="diag">
+  <h3>Phase 2 (Burst)에서 429 차단율 0.0% — 목표(>50%) 미달</h3>
+  <ol>
+    <li><span class="cause">RequestRateLimiter 필터가 payment-service route에 등록되지 않음</span><span class="how">확인: application.yml → spring.cloud.gateway.routes[3].filters 에 RequestRateLimiter 존재 확인</span></li>
+    <li><span class="cause">LocalRateLimiter Bean이 @Primary로 등록되지 않아 다른 RateLimiter가 사용됨</span><span class="how">확인: LocalRateLimiter.java에 @Primary 어노테이션 확인, 로그에서 "local-rate-limiter" 문자열 검색</span></li>
+    <li><span class="cause">burst-capacity 설정값이 예상(10)보다 훨씬 큼</span><span class="how">확인: application.yml → gateway.rate-limiter.routes.payment-service.burst-capacity 값 확인</span></li>
+    <li><span class="cause">KeyResolver가 IP를 제대로 추출하지 못해 VU별로 다른 키가 생성됨</span><span class="how">확인: SCG 로그에서 X-Forwarded-For 헤더 값 확인. k6 테스트 머신이 프록시 뒤에 있는지 점검</span></li>
+    <li><span class="cause">테스트 트래픽(15 VU × sleep 50ms ≈ 300 req/s)이 실제로 burst-capacity를 초과하지 못함</span><span class="how">확인: 실측 RPS: 127.4 req/s — burst-capacity(10)보다 높은지 확인</span></li>
+  </ol>
+</div>
+<div class="diag">
+  <h3>429 응답이 0건 — Rate Limiter가 전혀 동작하지 않음</h3>
+  <ol>
+    <li><span class="cause">요청이 payment-service route를 타지 않음 (Path predicate 불일치)</span><span class="how">확인: 요청 경로 GET /api/v1/payments/1가 Path=/api/v1/payments/** 에 매칭되는지 확인</span></li>
+    <li><span class="cause">LocalRateLimiter.isAllowed()에서 항상 allowed=true를 반환하는 버그</span><span class="how">확인: LocalRateLimiter.java:55 — count <= config.getBurstCapacity() 조건 확인</span></li>
+    <li><span class="cause">SCG가 테스트 대상이 아닌 다른 인스턴스로 요청이 갔음</span><span class="how">확인: SCG_BASE_URL(http://192.168.124.100:8080)이 실제 scg-app 주소와 일치하는지 확인</span></li>
+  </ol>
+</div>
+
+<p class="meta">Generated by k6 scenario1-rate-limiter.js</p>
+</body>
+</html>

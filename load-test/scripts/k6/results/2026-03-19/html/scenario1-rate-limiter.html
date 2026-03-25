@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG Rate Limiter 검증 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+</style>
+</head>
+<body>
+<h1>SCG Rate Limiter 검증 결과 — 시나리오 1 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-18T09:23:19.826Z | http://192.168.124.100:8080</p>
+
+<h2>목적</h2>
+<p>payment-service route에 설정된 LocalRateLimiter(burst-capacity=10/s per IP)가 실제로 초과 트래픽을 429로 차단하는지 검증한다. 저트래픽(baseline) → 초과트래픽(burst) → 트래픽 감소(recovery) 3단계로 rate limiter의 차단/복구 동작을 확인한다.</p>
+
+<h2>설정</h2>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>rate-limiter</td><td>LocalRateLimiter (인메모리, 1초 고정 윈도)</td></tr>
+  <tr><td>burst-capacity</td><td>10 req/s (per IP)</td></tr>
+  <tr><td>key-resolver</td><td>remoteAddrKeyResolver (클라이언트 IP)</td></tr>
+  <tr><td>target</td><td>GET /api/v1/payments/1 (payment-service route)</td></tr>
+</table>
+
+<h2>Phase 구성</h2>
+<table>
+  <tr><th>Phase</th><th>VU</th><th>Duration</th><th>Sleep</th><th>목적</th></tr>
+  <tr><td>1. Baseline</td><td class="num">1</td><td>15s</td><td>500ms</td><td>burst-capacity 미만, 429 = 0% 확인</td></tr>
+  <tr><td>2. Burst</td><td class="num">15</td><td>30s</td><td>50ms</td><td>burst-capacity 초과, 429 &gt; 50% 확인</td></tr>
+  <tr><td>3. Recovery</td><td class="num">1</td><td>10s</td><td>500ms</td><td>윈도 리셋 후 복구 확인</td></tr>
+</table>
+
+<h2>결과</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>전체 요청</td><td class="num">4133</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 통과</td><td class="num">359</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 차단 (429)</td><td class="num">3773</td><td>-</td><td>-</td></tr>
+  <tr><td>비정상 응답</td><td class="num">0</td><td>&lt;5</td><td class="pass">PASS</td></tr>
+  <tr><td>429 차단율</td><td class="num">91.3%</td><td>&gt;50%</td><td class="pass">PASS</td></tr>
+  <tr><td>평균 허용 TPS</td><td class="num">6.53 r/s</td><td>~10 r/s</td><td>-</td></tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th></tr>
+  <tr><td>429 차단 응답</td><td class="num">0.0ms</td><td class="num">125.7ms</td><td class="num">0.0ms</td></tr>
+  <tr><td>통과 응답</td><td class="num">0.0ms</td><td class="num">196.8ms</td><td class="num">0.0ms</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>unexpected_count: count<5</td><td class="pass">PASS</td></tr><tr><td>blocked_duration: p(95)<50</td><td class="fail">FAIL</td></tr><tr><td>rate_limited_rate{phase:burst}: rate>0.50</td><td class="pass">PASS</td></tr><tr><td>rate_limited_rate{phase:recovery}: rate<0.05</td><td class="fail">FAIL</td></tr><tr><td>rate_limited_rate{phase:baseline}: rate<0.01</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="diag">
+  <h3>Phase 3 (Recovery)에서 429 지속 — 트래픽 감소 후에도 복구 안 됨</h3>
+  <ol>
+    <li><span class="cause">1초 고정 윈도 카운터가 리셋되지 않음 (evictExpiredCounters 스케줄러 미동작)</span><span class="how">확인: LocalRateLimiter.java — @EnableScheduling이 RateLimiterConfig에 선언되어 있는지 확인</span></li>
+    <li><span class="cause">Phase 2 → Phase 3 전환 시점에 잔여 요청이 같은 윈도에 걸림</span><span class="how">확인: 정상 동작이라면 1~2건의 429는 윈도 경계 문제로 허용 범위 (threshold: <5%)</span></li>
+  </ol>
+</div>
+<div class="diag">
+  <h3>429 응답 P95 125.7ms — 목표(<50ms) 초과</h3>
+  <ol>
+    <li><span class="cause">SCG Netty event loop이 포화 상태 — 429를 반환하는 것 자체가 지연됨</span><span class="how">확인: Grafana에서 reactor.netty.* 메트릭 확인. scg-app CPU 사용률 점검</span></li>
+    <li><span class="cause">Rate Limiter 이전 필터 체인(Correlation → AccessLog → InternalBlock → Sanitize → JWT)에서 병목</span><span class="how">확인: Jaeger span에서 JWT 검증 시간 확인. JWT 파싱이 CPU-bound라 과부하 시 지연 가능</span></li>
+    <li><span class="cause">GC pause가 응답 시간에 영향</span><span class="how">확인: Grafana → jvm.gc.pause 메트릭에서 테스트 시간대 GC pause 확인</span></li>
+  </ol>
+</div>
+
+<p class="meta">Generated by k6 scenario1-rate-limiter.js</p>
+</body>
+</html>
