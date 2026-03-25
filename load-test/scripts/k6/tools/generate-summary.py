@@ -34,9 +34,11 @@ def ensure_openpyxl():
 
 
 def load_json_results(result_dir):
-    """디렉토리 내 *.json 파일을 로드, 같은 시나리오는 최신만 유지"""
+    """json/ 서브디렉토리의 *.json 파일을 로드, 없으면 루트에서 탐색 (하위 호환)"""
     all_results = []
-    for f in sorted(Path(result_dir).glob("*.json")):
+    json_dir = Path(result_dir) / "json"
+    search_dir = json_dir if json_dir.exists() else Path(result_dir)
+    for f in sorted(search_dir.glob("*.json")):
         try:
             with open(f, "r", encoding="utf-8") as fh:
                 data = json.load(fh)

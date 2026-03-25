@@ -525,14 +525,14 @@ ${diagnostics.length > 0
         `  총 요청: ${totalReqs} | 전체 P95=${overallP95.toFixed(1)}ms | 에러율=${(errRate*100).toFixed(2)}%`,
         `  WR=${wrCnt}건(P95=${wrP95.toFixed(1)}ms) / Concert=${cCnt}건(P95=${cP95.toFixed(1)}ms) / Payment=${pCnt}건(P95=${pP95.toFixed(1)}ms)`,
         `  429=${rlCnt} / 5xx=${errCnt} / unexpected=${unexpCnt}`,
-        `  산출물: ${RESULT_DIR}/scenario6-soak_${RUN_TAG}.*`,
+        `  산출물: ${RESULT_DIR}/{html,json,csv}/scenario6-soak_${RUN_TAG}.*`,
         '',
     ].join('\n');
 
     return {
         stdout: consoleMsg,
-        [`${RESULT_DIR}/scenario6-soak_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
-        [`${RESULT_DIR}/scenario6-soak_${RUN_TAG}.csv`]:  csv,
-        [`${RESULT_DIR}/scenario6-soak_${RUN_TAG}.html`]: html,
+        [`${RESULT_DIR}/json/scenario6-soak_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
+        [`${RESULT_DIR}/csv/scenario6-soak_${RUN_TAG}.csv`]:  csv,
+        [`${RESULT_DIR}/html/scenario6-soak_${RUN_TAG}.html`]: html,
     };
 }

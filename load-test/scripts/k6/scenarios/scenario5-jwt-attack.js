@@ -560,14 +560,14 @@ ${diagnostics.length > 0
         `\n[scenario5-jwt-attack] ${passText}`,
         `  공격(${attackCnt}건): 401율=${(attack401R*100).toFixed(1)}% | 거절 P95=${attackP95.toFixed(1)}ms`,
         `  정상(${normalCnt}건): 에러율=${(normalErrR*100).toFixed(2)}% | P95=${normalP95.toFixed(1)}ms`,
-        `  산출물: ${RESULT_DIR}/scenario5-jwt-attack_${RUN_TAG}.*`,
+        `  산출물: ${RESULT_DIR}/{html,json,csv}/scenario5-jwt-attack_${RUN_TAG}.*`,
         '',
     ].join('\n');
 
     return {
         stdout: consoleMsg,
-        [`${RESULT_DIR}/scenario5-jwt-attack_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
-        [`${RESULT_DIR}/scenario5-jwt-attack_${RUN_TAG}.csv`]:  csv,
-        [`${RESULT_DIR}/scenario5-jwt-attack_${RUN_TAG}.html`]: html,
+        [`${RESULT_DIR}/json/scenario5-jwt-attack_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
+        [`${RESULT_DIR}/csv/scenario5-jwt-attack_${RUN_TAG}.csv`]:  csv,
+        [`${RESULT_DIR}/html/scenario5-jwt-attack_${RUN_TAG}.html`]: html,
     };
 }
