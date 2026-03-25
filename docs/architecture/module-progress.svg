@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 780" style="background:rgb(30,30,30)">
+  <g font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+
+  <!-- 타이틀 -->
+  <rect x="0" y="0" width="680" height="30" fill="rgb(22,22,22)"/>
+  <text x="340" y="10" text-anchor="middle" dominant-baseline="central" fill="rgb(150,150,150)" font-size="11" font-weight="500">MSA 티켓팅 시스템 · 모듈별 개발 진행도</text>
+  <text x="340" y="23" text-anchor="middle" dominant-baseline="central" fill="rgb(90,90,90)" font-size="10">코드베이스 분석 기준 · Java 21 · Spring Boot 3.x · Spring Cloud 2024.0.0</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 1: scg-app  [PURPLE · 90%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="36" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <!-- Badge -->
+  <rect x="30" y="50" width="72" height="18" rx="3" fill="rgb(38,30,92)"/>
+  <text x="66" y="59" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="10" font-weight="600">API Gateway</text>
+  <!-- Name -->
+  <text x="114" y="59" text-anchor="start" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="600">scg-app</text>
+  <!-- % -->
+  <text x="650" y="59" text-anchor="end" dominant-baseline="central" fill="rgb(206,203,246)" font-size="15" font-weight="700">90%</text>
+  <!-- Progress bar bg -->
+  <rect x="30" y="76" width="568" height="12" rx="6" fill="rgb(38,30,92)"/>
+  <!-- Progress bar fill (90% of 568 = 511) -->
+  <rect x="30" y="76" width="511" height="12" rx="6" fill="rgb(175,169,236)"/>
+  <!-- Feature: completed -->
+  <text x="30" y="101" text-anchor="start" dominant-baseline="central" fill="rgb(175,169,236)" font-size="10">✓ JWT 인증 · Rate Limiting · Circuit Breaker · Bulkhead · Retry · OTel 분산추적 · 보안헤더 · 로그마스킹 · CORS</text>
+  <text x="30" y="118" text-anchor="start" dominant-baseline="central" fill="rgb(100,90,180)" font-size="10">△ 비동기 이벤트 발행 미구현</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 2: waitingroom-app  [ORANGE · 75%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="140" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <rect x="30" y="154" width="72" height="18" rx="3" fill="rgb(65,35,4)"/>
+  <text x="66" y="163" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="10" font-weight="600">대기열 관리</text>
+  <text x="114" y="163" text-anchor="start" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="600">waitingroom-app</text>
+  <text x="650" y="163" text-anchor="end" dominant-baseline="central" fill="rgb(250,199,117)" font-size="15" font-weight="700">75%</text>
+  <rect x="30" y="180" width="568" height="12" rx="6" fill="rgb(65,35,4)"/>
+  <!-- 75% of 568 = 426 -->
+  <rect x="30" y="180" width="426" height="12" rx="6" fill="rgb(239,159,39)"/>
+  <text x="30" y="205" text-anchor="start" dominant-baseline="central" fill="rgb(239,159,39)" font-size="10">✓ Redis Sorted Set 대기열 · 토큰 발급/검증/소비 · 만료 자동 정리 스케줄러 · WebFlux Reactive · 내부 API</text>
+  <text x="30" y="222" text-anchor="start" dominant-baseline="central" fill="rgb(155,100,20)" font-size="10">△ 공연 매진 여부 연동 필요 · EventSchedule API 완결 · 스케줄 연동 검증</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 3: concert-app  [BLUE · 85%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="244" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <rect x="30" y="258" width="72" height="18" rx="3" fill="rgb(7,45,82)"/>
+  <text x="66" y="267" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="10" font-weight="600">공연 정보</text>
+  <text x="114" y="267" text-anchor="start" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="600">concert-app</text>
+  <text x="650" y="267" text-anchor="end" dominant-baseline="central" fill="rgb(181,212,244)" font-size="15" font-weight="700">85%</text>
+  <rect x="30" y="284" width="568" height="12" rx="6" fill="rgb(7,45,82)"/>
+  <!-- 85% of 568 = 483 -->
+  <rect x="30" y="284" width="483" height="12" rx="6" fill="rgb(133,183,235)"/>
+  <text x="30" y="309" text-anchor="start" dominant-baseline="central" fill="rgb(133,183,235)" font-size="10">✓ 공연/스케줄/좌석 조회 · Redis Cache-Aside 캐싱 · 좌석 상태관리(AVAILABLE/HELD/SOLD) · 내부 API · Swagger</text>
+  <text x="30" y="326" text-anchor="start" dominant-baseline="central" fill="rgb(60,120,170)" font-size="10">△ CQRS 패턴 도입(계획) · 예매 오픈 시간 검증 · 특정 유저 좌석 권한 검증</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 4: booking-app  [RED · 80%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="348" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <rect x="30" y="362" width="72" height="18" rx="3" fill="rgb(75,25,10)"/>
+  <text x="66" y="371" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="10" font-weight="600">예매 처리</text>
+  <text x="114" y="371" text-anchor="start" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="600">booking-app</text>
+  <text x="650" y="371" text-anchor="end" dominant-baseline="central" fill="rgb(245,196,179)" font-size="15" font-weight="700">80%</text>
+  <rect x="30" y="388" width="568" height="12" rx="6" fill="rgb(75,25,10)"/>
+  <!-- 80% of 568 = 454 -->
+  <rect x="30" y="388" width="454" height="12" rx="6" fill="rgb(240,153,123)"/>
+  <text x="30" y="413" text-anchor="start" dominant-baseline="central" fill="rgb(240,153,123)" font-size="10">✓ 예약 생성/조회/취소/확정 · Saga 보상 트랜잭션 · 좌석 HOLD/RELEASE · 만료 배치 · 서비스 간 REST 호출</text>
+  <text x="30" y="430" text-anchor="start" dominant-baseline="central" fill="rgb(165,75,45)" font-size="10">△ payment_id · confirmed_at 컬럼 연계 필요 · 테스트 커버리지 매우 부족 (현재 2개)</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 5: payment-app  [GREEN · 85%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="452" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <rect x="30" y="466" width="72" height="18" rx="3" fill="rgb(5,52,42)"/>
+  <text x="66" y="475" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="10" font-weight="600">결제 처리</text>
+  <text x="114" y="475" text-anchor="start" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="600">payment-app</text>
+  <text x="650" y="475" text-anchor="end" dominant-baseline="central" fill="rgb(159,225,203)" font-size="15" font-weight="700">85%</text>
+  <rect x="30" y="492" width="568" height="12" rx="6" fill="rgb(5,52,42)"/>
+  <!-- 85% of 568 = 483 -->
+  <rect x="30" y="492" width="483" height="12" rx="6" fill="rgb(93,202,165)"/>
+  <text x="30" y="517" text-anchor="start" dominant-baseline="central" fill="rgb(93,202,165)" font-size="10">✓ 결제 요청/승인/취소 · Redis 멱등성 보장(24h TTL · setIfAbsent) · Saga 보상 · TossPayments 클라이언트 구조</text>
+  <text x="30" y="534" text-anchor="start" dominant-baseline="central" fill="rgb(40,120,90)" font-size="10">△ TossPayments 실 API Key 연동 · 테스트 커버리지 부족 (현재 1개)</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 6: user-app  [BLUE(dark) · 70%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="556" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(10,55,100)" stroke="rgb(100,175,230)"/>
+  <rect x="30" y="570" width="72" height="18" rx="3" fill="rgb(6,35,64)"/>
+  <text x="66" y="579" text-anchor="middle" dominant-baseline="central" fill="rgb(100,175,230)" font-size="10" font-weight="600">회원 관리</text>
+  <text x="114" y="579" text-anchor="start" dominant-baseline="central" fill="rgb(170,210,245)" font-size="14" font-weight="600">user-app</text>
+  <text x="650" y="579" text-anchor="end" dominant-baseline="central" fill="rgb(170,210,245)" font-size="15" font-weight="700">70%</text>
+  <rect x="30" y="596" width="568" height="12" rx="6" fill="rgb(6,35,64)"/>
+  <!-- 70% of 568 = 398 -->
+  <rect x="30" y="596" width="398" height="12" rx="6" fill="rgb(100,175,230)"/>
+  <text x="30" y="621" text-anchor="start" dominant-baseline="central" fill="rgb(100,175,230)" font-size="10">✓ 회원 가입/조회 · Redis Cache-Aside · CircuitBreaker 적용 AI 연동 구조 · TraceId 필터 · DataSeeder</text>
+  <text x="30" y="638" text-anchor="start" dominant-baseline="central" fill="rgb(45,100,150)" font-size="10">△ OAuth2 + JWT 발급 로직 미구현 (핵심 미완) · AI 모델 실 API 연동 · 테스트 보강 필요</text>
+
+  <!-- ══════════════════════════════════════════════
+       MODULE 7: common-module  [GRAY · 90%]
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="660" width="640" height="92" rx="10" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <rect x="30" y="674" width="72" height="18" rx="3" fill="rgb(45,45,42)"/>
+  <text x="66" y="683" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="10" font-weight="600">공통 모듈</text>
+  <text x="114" y="683" text-anchor="start" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="600">common-module</text>
+  <text x="650" y="683" text-anchor="end" dominant-baseline="central" fill="rgb(211,209,199)" font-size="15" font-weight="700">90%</text>
+  <rect x="30" y="700" width="568" height="12" rx="6" fill="rgb(45,45,42)"/>
+  <!-- 90% of 568 = 511 -->
+  <rect x="30" y="700" width="511" height="12" rx="6" fill="rgb(180,178,169)"/>
+  <text x="30" y="725" text-anchor="start" dominant-baseline="central" fill="rgb(180,178,169)" font-size="10">✓ ErrorCode Enum · GlobalExceptionHandler · Auth-Passport Base64url 코덱 · 페이지네이션 래퍼 · JPA 감사</text>
+  <text x="30" y="742" text-anchor="start" dominant-baseline="central" fill="rgb(110,108,100)" font-size="10">△ ResponseWrapper&lt;T&gt; 공통 API 응답 형식 통일 점검</text>
+
+  <!-- ══════════════════════════════════════════════
+       BOTTOM: 전체 완성도 요약
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="760" width="640" height="16" rx="4" fill="rgb(22,22,22)"/>
+  <text x="340" y="768" text-anchor="middle" dominant-baseline="central" fill="rgb(90,90,90)" font-size="10">전체 평균 완성도 ≈ 80% · 핵심 기능 (대기열·예약·결제·Saga·멱등성) 구현 완료 · 테스트 커버리지 보강 및 실 API 연동 필요</text>
+
+  </g>
+</svg>

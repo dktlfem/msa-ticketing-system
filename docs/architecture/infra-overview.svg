@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 810" style="background:rgb(30,30,30)">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M1 1L7 4L1 7" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <g font-family="'Anthropic Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+
+  <!-- 타이틀 -->
+  <rect x="0" y="0" width="680" height="18" fill="rgb(22,22,22)"/>
+  <text x="340" y="9" text-anchor="middle" dominant-baseline="central" fill="rgb(150,150,150)" font-size="11" font-weight="500">MSA 기반 대규모 티켓팅 시스템 · 인프라 환경 구성도</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 1: 보안 / 접근 제어  (RED)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="22" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="36" y="38" text-anchor="start" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="500">보안 / 접근 제어</text>
+
+  <!-- Card 1: 2중 NAT -->
+  <rect x="32" y="50" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="104" y="72" text-anchor="middle" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="500">2중 NAT 구조</text>
+  <text x="104" y="90" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">LG8550 → LG63A7</text>
+  <text x="104" y="108" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">DHCP 2노드 격리</text>
+
+  <!-- Card 2: VPN -->
+  <rect x="188" y="50" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="260" y="72" text-anchor="middle" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="500">VPN-only Ingress</text>
+  <text x="260" y="90" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">OpenVPN 1194 UDP</text>
+  <text x="260" y="108" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">외부 노출면 최소화</text>
+
+  <!-- Card 3: OAuth2 Proxy -->
+  <rect x="344" y="50" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="416" y="72" text-anchor="middle" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="500">OAuth2-Proxy</text>
+  <text x="416" y="90" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">GitLab OIDC 통합</text>
+  <text x="416" y="108" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">expose 4180</text>
+
+  <!-- Card 4: 2중 MFA -->
+  <rect x="500" y="50" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="572" y="72" text-anchor="middle" dominant-baseline="central" fill="rgb(245,196,179)" font-size="14" font-weight="500">2중 MFA</text>
+  <text x="572" y="90" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">Google Authenticator</text>
+  <text x="572" y="108" text-anchor="middle" dominant-baseline="central" fill="rgb(240,153,123)" font-size="12">Bitwarden OTP</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 2: CI/CD 파이프라인  (ORANGE)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="150" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="36" y="166" text-anchor="start" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="500">CI/CD 파이프라인 (GitLab → Jenkins → AWS EC2 Blue/Green)</text>
+
+  <!-- Card 1: GitLab -->
+  <rect x="32" y="178" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="104" y="200" text-anchor="middle" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="500">GitLab</text>
+  <text x="104" y="218" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">소스 저장소 · SCM</text>
+  <text x="104" y="236" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">포트 8081 · SSH 2223</text>
+
+  <!-- Card 2: Jenkins -->
+  <rect x="188" y="178" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="260" y="200" text-anchor="middle" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="500">Jenkins</text>
+  <text x="260" y="218" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">빌드 · 테스트 · 배포</text>
+  <text x="260" y="236" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">expose 8080 · Docker socket</text>
+
+  <!-- Card 3: AWS EC2 -->
+  <rect x="344" y="178" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="416" y="200" text-anchor="middle" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="500">AWS EC2 + Nginx</text>
+  <text x="416" y="218" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">Blue/Green 무중단 배포</text>
+  <text x="416" y="236" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">프로덕션 환경</text>
+
+  <!-- Card 4: AWS RDS -->
+  <rect x="500" y="178" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="572" y="200" text-anchor="middle" dominant-baseline="central" fill="rgb(250,199,117)" font-size="14" font-weight="500">AWS RDS</text>
+  <text x="572" y="218" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">MySQL 프로덕션 DB</text>
+  <text x="572" y="236" text-anchor="middle" dominant-baseline="central" fill="rgb(239,159,39)" font-size="12">자동 마이그레이션</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 3: API 게이트웨이 계층  (PURPLE)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="278" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <text x="36" y="294" text-anchor="start" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="500">API 게이트웨이 계층</text>
+
+  <!-- Card 1: Nginx Admin GW -->
+  <rect x="32" y="306" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <text x="104" y="328" text-anchor="middle" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="500">Nginx Admin GW</text>
+  <text x="104" y="346" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">리버스 프록시</text>
+  <text x="104" y="364" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">ports 8080:80</text>
+
+  <!-- Card 2: SCG -->
+  <rect x="188" y="306" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <text x="260" y="328" text-anchor="middle" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="500">Spring Cloud GW</text>
+  <text x="260" y="346" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">라우팅 · 9개 필터체인</text>
+  <text x="260" y="364" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">expose 8080</text>
+
+  <!-- Card 3: Rate Limiter -->
+  <rect x="344" y="306" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <text x="416" y="328" text-anchor="middle" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="500">Rate Limiter</text>
+  <text x="416" y="346" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">Redis Token Bucket</text>
+  <text x="416" y="364" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">서비스별 rps 제한</text>
+
+  <!-- Card 4: Resilience4j -->
+  <rect x="500" y="306" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(60,52,137)" stroke="rgb(175,169,236)"/>
+  <text x="572" y="328" text-anchor="middle" dominant-baseline="central" fill="rgb(206,203,246)" font-size="14" font-weight="500">Resilience4j</text>
+  <text x="572" y="346" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">Circuit Breaker</text>
+  <text x="572" y="364" text-anchor="middle" dominant-baseline="central" fill="rgb(175,169,236)" font-size="12">Bulkhead 패턴</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 4: 모니터링 / 관측성  (BLUE)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="406" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <text x="36" y="422" text-anchor="start" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="500">모니터링 / 관측성 (Observability)</text>
+
+  <!-- Card 1: Prometheus -->
+  <rect x="32" y="434" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <text x="104" y="456" text-anchor="middle" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="500">Prometheus</text>
+  <text x="104" y="474" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">메트릭 수집</text>
+  <text x="104" y="492" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">expose 9090</text>
+
+  <!-- Card 2: Grafana -->
+  <rect x="188" y="434" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <text x="260" y="456" text-anchor="middle" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="500">Grafana</text>
+  <text x="260" y="474" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">대시보드 시각화</text>
+  <text x="260" y="492" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">expose 3000</text>
+
+  <!-- Card 3: Jaeger -->
+  <rect x="344" y="434" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <text x="416" y="456" text-anchor="middle" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="500">Jaeger (OTel)</text>
+  <text x="416" y="474" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">분산 추적 · UI 16686</text>
+  <text x="416" y="492" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">OTLP gRPC/HTTP 4317/4318</text>
+
+  <!-- Card 4: AlertManager + InfluxDB -->
+  <rect x="500" y="434" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(12,68,124)" stroke="rgb(133,183,235)"/>
+  <text x="572" y="456" text-anchor="middle" dominant-baseline="central" fill="rgb(181,212,244)" font-size="14" font-weight="500">AlertManager</text>
+  <text x="572" y="474" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">알림 9093</text>
+  <text x="572" y="492" text-anchor="middle" dominant-baseline="central" fill="rgb(133,183,235)" font-size="12">InfluxDB k6 결과 8086</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 5: 로그 파이프라인  (GREEN)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="534" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <text x="36" y="550" text-anchor="start" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="500">로그 파이프라인 (ELK Stack)</text>
+
+  <!-- Card 1: Filebeat -->
+  <rect x="32" y="562" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <text x="104" y="584" text-anchor="middle" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="500">Filebeat</text>
+  <text x="104" y="602" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">Docker 로그 수집</text>
+  <text x="104" y="620" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">전체 컨테이너 ship</text>
+
+  <!-- Card 2: Elasticsearch -->
+  <rect x="188" y="562" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <text x="260" y="584" text-anchor="middle" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="500">Elasticsearch</text>
+  <text x="260" y="602" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">로그 저장소 9200</text>
+  <text x="260" y="620" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">JVM 2GB · 9.3.0</text>
+
+  <!-- Card 3: Kibana -->
+  <rect x="344" y="562" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <text x="416" y="584" text-anchor="middle" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="500">Kibana</text>
+  <text x="416" y="602" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">로그 시각화 5601</text>
+  <text x="416" y="620" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">/kibana 서브패스</text>
+
+  <!-- Card 4: Log Masking -->
+  <rect x="500" y="562" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(8,80,65)" stroke="rgb(93,202,165)"/>
+  <text x="572" y="584" text-anchor="middle" dominant-baseline="central" fill="rgb(159,225,203)" font-size="14" font-weight="500">로그 마스킹</text>
+  <text x="572" y="602" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">SCG 단계 PII 보호</text>
+  <text x="572" y="620" text-anchor="middle" dominant-baseline="central" fill="rgb(93,202,165)" font-size="12">민감 헤더 자동 제거</text>
+
+  <!-- ══════════════════════════════════════════════
+       ROW 6: 인프라 노드  (GRAY)
+  ══════════════════════════════════════════════ -->
+  <rect x="20" y="680" width="640" height="112" rx="10" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <text x="36" y="696" text-anchor="start" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="500">인프라 노드</text>
+
+  <!-- Card 1: 메인 서버 -->
+  <rect x="32" y="708" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <text x="104" y="730" text-anchor="middle" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="500">WSL2 메인 서버</text>
+  <text x="104" y="748" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">RAM 128GB</text>
+  <text x="104" y="766" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">192.168.124.100</text>
+
+  <!-- Card 2: Redis 전용 -->
+  <rect x="188" y="708" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <text x="260" y="730" text-anchor="middle" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="500">Redis 전용 노드</text>
+  <text x="260" y="748" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">에코비 N100 · 16GB</text>
+  <text x="260" y="766" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">192.168.124.101</text>
+
+  <!-- Card 3: Docker Network -->
+  <rect x="344" y="708" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <text x="416" y="730" text-anchor="middle" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="500">Docker Networks</text>
+  <text x="416" y="748" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">dev · monitoring</text>
+  <text x="416" y="766" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">ticketing (3개 분리)</text>
+
+  <!-- Card 4: AWS -->
+  <rect x="500" y="708" width="144" height="74" rx="6" stroke-width="0.5" fill="rgb(68,68,65)" stroke="rgb(180,178,169)"/>
+  <text x="572" y="730" text-anchor="middle" dominant-baseline="central" fill="rgb(211,209,199)" font-size="14" font-weight="500">AWS 프로덕션</text>
+  <text x="572" y="748" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">EC2 (Nginx) + RDS</text>
+  <text x="572" y="766" text-anchor="middle" dominant-baseline="central" fill="rgb(180,178,169)" font-size="12">Blue/Green 배포 대상</text>
+
+  </g>
+</svg>
