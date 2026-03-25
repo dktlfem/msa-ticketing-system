@@ -107,8 +107,12 @@ spring:
               args:
                 name: booking-service-cb
                 fallbackUri: forward:/fallback/service-unavailable
+                # ADR: booking-app은 waitingroom 4xx(410/422)를 IllegalStateException(500)으로
+                # 변환하므로, 500을 CB 실패 카운트에서 제외.
+                # 500은 비즈니스 로직 오류(토큰 만료/무효)이지 인프라 장애가 아님.
+                # 진짜 인프라 장애(게이트웨이/연결 오류)인 502/503/504만 CB 트리거.
+                # TODO: booking-app에서 4xx를 직접 비즈니스 예외로 처리하도록 개선 후 500 복원 검토
                 statusCodes:
-                  - 500
                   - 502
                   - 503
                   - 504

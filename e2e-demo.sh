@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-BASE_URL="http://192.168.124.100:8080"
+BASE_URL="http://192.168.124.100:8090"
 # SCG JWT 시크릿 (application.yml의 개발용 시크릿)
 JWT_SECRET="change-me-in-production-must-be-at-least-32-bytes!!"
 
@@ -85,7 +85,7 @@ print_separator "Scene 1. 정상 예약 플로우 (Happy Path)"
 
 USER_ID=1
 EVENT_ID=1
-SCHEDULE_ID=1
+SCHEDULE_ID=11
 
 print_step "JWT 생성 (userId=${USER_ID})"
 JWT=$(make_jwt "$USER_ID")
@@ -105,9 +105,18 @@ TOKEN_ID=$(echo "$QUEUE_RESP" | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print(d.get('tokenId') or '')" 2>/dev/null || echo "")
 
 print_step "② 대기열 상태 조회"
-curl -s "${BASE_URL}/api/v1/waiting-room/status?eventId=${EVENT_ID}&userId=${USER_ID}" \
-  -H "Authorization: Bearer ${JWT}" \
-  | python3 -m json.tool 2>/dev/null
+STATUS_RESP=$(curl -s "${BASE_URL}/api/v1/waiting-room/status?eventId=${EVENT_ID}&userId=${USER_ID}" \
+  -H "Authorization: Bearer ${JWT}")
+echo "$STATUS_RESP" | python3 -m json.tool 2>/dev/null || echo "$STATUS_RESP"
+# 상태 조회 결과에서 isAllowed/tokenId 갱신 (진입 직후 즉시 통과 케이스 대응)
+STATUS_IS_ALLOWED=$(echo "$STATUS_RESP" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); print(d.get('isAllowed',False))" 2>/dev/null || echo "False")
+STATUS_TOKEN_ID=$(echo "$STATUS_RESP" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); print(d.get('tokenId') or '')" 2>/dev/null || echo "")
+if [ "$STATUS_IS_ALLOWED" = "True" ] && [ -n "$STATUS_TOKEN_ID" ]; then
+  IS_ALLOWED="True"
+  TOKEN_ID="$STATUS_TOKEN_ID"
+fi
 
 print_step "③ 좌석 목록 조회 (scheduleId=${SCHEDULE_ID})"
 SEAT_RESP=$(curl -s "${BASE_URL}/api/v1/seats/available/${SCHEDULE_ID}" \
@@ -170,7 +179,7 @@ echo "  → 예상: 400 또는 401 (토큰 검증 실패)"
 # -----------------------------------------------------------------------------
 print_separator "Scene 3. 동시 예약 충돌 (낙관적 락)"
 
-SEAT_ID_CONCURRENT=2
+SEAT_ID_CONCURRENT=11
 JWT_1=$(make_jwt "1")
 JWT_2=$(make_jwt "2")
 PASSPORT_1=$(make_passport "1")
