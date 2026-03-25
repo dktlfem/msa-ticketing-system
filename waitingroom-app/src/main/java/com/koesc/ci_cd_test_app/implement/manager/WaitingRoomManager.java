@@ -7,6 +7,7 @@ import com.koesc.ci_cd_test_app.implement.writer.WaitingRoomWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,6 +17,9 @@ public class WaitingRoomManager {
 
     private final WaitingRoomReader waitingRoomReader;
     private final WaitingRoomWriter waitingRoomWriter;
+    // ADR: TimeConfig에서 Clock(Asia/Seoul)을 주입받아 시간 일관성 보장
+    // WaitingRoomInternalService.validateUsable()도 동일 Clock 사용 → timezone 불일치로 인한 즉시 만료 버그 방지
+    private final Clock clock;
 
     /**
      * [핵심 기능] 대기열 통과 토큰 생성
@@ -25,19 +29,26 @@ public class WaitingRoomManager {
     public WaitingToken createToken(Long eventId, Long userId) {
 
         // 1. 이미 발급된 유효 토큰이 있는지 확인 (중복 발급 방지)
+        // ADR: 만료 여부(expiredAt)도 함께 체크. ACTIVE 상태라도 expiredAt이 지난 토큰은 재사용 금지.
+        // 재사용 시 validateUsable()에서 410 WAITING_TOKEN_EXPIRED 발생 → 예약 불가 버그.
+        LocalDateTime checkNow = LocalDateTime.now(clock);
         WaitingToken existingToken = waitingRoomReader.findTokenByUser(userId, eventId);
-        if (existingToken != null && existingToken.getStatus() == WaitingTokenStatus.ACTIVE) {
+        if (existingToken != null
+                && existingToken.getStatus() == WaitingTokenStatus.ACTIVE
+                && existingToken.getExpiredAt() != null
+                && existingToken.getExpiredAt().isAfter(checkNow)) {
             return existingToken;
         }
 
-        // 2. 새로운 토큰 생성 (UUID 사용)
+        // 2. 새로운 토큰 생성 (UUID 사용) — 기존 만료 토큰은 새 토큰으로 대체
+        LocalDateTime now = checkNow;
         WaitingToken newToken = WaitingToken.builder()
                 .tokenId(UUID.randomUUID().toString()) // 예측 불가능한 ID
                 .userId(userId)
                 .eventId(eventId)
                 .status(WaitingTokenStatus.ACTIVE)
-                .issuedAt(LocalDateTime.now())
-                .expiredAt(LocalDateTime.now().plusMinutes(10)) // 10분간 유효
+                .issuedAt(now)
+                .expiredAt(now.plusMinutes(10)) // 10분간 유효 (Clock 기준 — validateUsable()과 동일 기준 사용)
                 .build();
 
         // 3. 저장
@@ -53,7 +64,7 @@ public class WaitingRoomManager {
 
         // 토큰이 없거나, 만료되었거나, 활성 상태가 아니면 false 리턴
         if (token == null) return false;
-        if (token.getExpiredAt().isBefore(LocalDateTime.now())) return false;
+        if (token.getExpiredAt().isBefore(LocalDateTime.now(clock))) return false;
         return token.getStatus() == WaitingTokenStatus.ACTIVE;
     }
 
