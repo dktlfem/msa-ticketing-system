@@ -715,14 +715,14 @@ ${diagnostics.length > 0
         firstRejectedTime   ? `  🔴 첫 BH 거절: ${firstRejectedTime}` : '  🔴 BH 거절: 미감지',
         bhActiveMs !== null  ? `  ⏱️ BH 활성 보호: ${(bhActiveMs / 1000).toFixed(1)}초` : '  ⏱️ BH 보호: 미측정',
         firstRecoveryTime   ? `  🟢 복구: ${firstRecoveryTime}` : '  🟢 복구: 미감지',
-        `  산출물: ${RESULT_DIR}/scenario3-bulkhead_${RUN_TAG}.*`,
+        `  산출물: ${RESULT_DIR}/{html,json,csv}/scenario3-bulkhead_${RUN_TAG}.*`,
         '',
     ].join('\n');
 
     return {
         stdout:                                                  consoleMsg,
-        [`${RESULT_DIR}/scenario3-bulkhead_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
-        [`${RESULT_DIR}/scenario3-bulkhead_${RUN_TAG}.csv`]:  csv,
-        [`${RESULT_DIR}/scenario3-bulkhead_${RUN_TAG}.html`]: html,
+        [`${RESULT_DIR}/json/scenario3-bulkhead_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
+        [`${RESULT_DIR}/csv/scenario3-bulkhead_${RUN_TAG}.csv`]:  csv,
+        [`${RESULT_DIR}/html/scenario3-bulkhead_${RUN_TAG}.html`]: html,
     };
 }

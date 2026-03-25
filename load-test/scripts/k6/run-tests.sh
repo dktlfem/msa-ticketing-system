@@ -9,6 +9,8 @@ STAGING_SSH="${STAGING_SSH:-dktlfem@192.168.124.100}"
 RUN_DATE="$(date +%Y-%m-%d)"
 RESULT_DIR="${RESULT_DIR:-results/${RUN_DATE}}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCENARIO_DIR="${SCRIPT_DIR}/scenarios"
+TOOLS_DIR="${SCRIPT_DIR}/tools"
 SOAK_DURATION="${SOAK_DURATION:-10m}"
 
 # ── 색상 ────────────────────────────────────────────────────
@@ -61,8 +63,8 @@ preflight_check() {
     INFLUX_OUT="--out influxdb=${INFLUXDB_URL}"
   fi
 
-  mkdir -p "${RESULT_DIR}"
-  log_ok "결과 폴더: ${RESULT_DIR}/"
+  mkdir -p "${RESULT_DIR}/html" "${RESULT_DIR}/json" "${RESULT_DIR}/csv"
+  log_ok "결과 폴더: ${RESULT_DIR}/{html,json,csv}/"
   echo ""
 }
 
@@ -77,7 +79,7 @@ run_scenario() {
     extra_envs=("$@")
   fi
 
-  if [[ ! -f "${SCRIPT_DIR}/${script}" ]]; then
+  if [[ ! -f "${SCENARIO_DIR}/${script}" ]]; then
     log_warn "스크립트 없음: ${script} (건너뜀)"
     return 0
   fi
@@ -109,7 +111,7 @@ run_scenario() {
     --tag run_date="${RUN_DATE}" \
     "${env_args[@]}" \
     ${INFLUX_OUT:-} \
-    "${SCRIPT_DIR}/${script}" || {
+    "${SCENARIO_DIR}/${script}" || {
       log_err "${testid} 실행 실패 (exit code: $?)"
       return 1
     }
@@ -306,10 +308,10 @@ esac
 
 # ── Excel 요약 생성 ─────────────────────────────────────────
 echo ""
-if [[ -d "${RESULT_DIR}" ]] && ls "${RESULT_DIR}"/*.json 1>/dev/null 2>&1; then
+if [[ -d "${RESULT_DIR}/json" ]] && ls "${RESULT_DIR}/json/"*.json 1>/dev/null 2>&1; then
   echo "====== Excel 요약 생성 ======"
   if command -v python3 &>/dev/null; then
-    python3 "${SCRIPT_DIR}/generate-summary.py" "${RESULT_DIR}" || log_warn "Excel 요약 생성 실패"
+    python3 "${TOOLS_DIR}/generate-summary.py" "${RESULT_DIR}" || log_warn "Excel 요약 생성 실패"
   else
     log_warn "python3 미설치 — Excel 요약 생성 건너뜀"
   fi

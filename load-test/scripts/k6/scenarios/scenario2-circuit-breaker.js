@@ -760,14 +760,14 @@ ${diagnostics.length > 0
         `  Fallback 비율: ${(fbRate * 100).toFixed(1)}% | 순수FB P95: ${pureFbP95.toFixed(1)}ms | CLOSED P95: ${closedP95.toFixed(1)}ms`,
         openTime     ? `  🔴 CB OPEN: ${openTime}` : '  🔴 CB OPEN: 미감지',
         recoveryTime ? `  🟢 CB 복구: ${recoveryTime}` : '  🟢 CB 복구: 미감지',
-        `  산출물: ${RESULT_DIR}/scenario2-circuit-breaker_${RUN_TAG}.*`,
+        `  산출물: ${RESULT_DIR}/{html,json,csv}/scenario2-circuit-breaker_${RUN_TAG}.*`,
         '',
     ].join('\n');
 
     return {
         stdout:                                                    consoleMsg,
-        [`${RESULT_DIR}/scenario2-circuit-breaker_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
-        [`${RESULT_DIR}/scenario2-circuit-breaker_${RUN_TAG}.csv`]:  csv,
-        [`${RESULT_DIR}/scenario2-circuit-breaker_${RUN_TAG}.html`]: html,
+        [`${RESULT_DIR}/json/scenario2-circuit-breaker_${RUN_TAG}.json`]: JSON.stringify(jsonReport, null, 2),
+        [`${RESULT_DIR}/csv/scenario2-circuit-breaker_${RUN_TAG}.csv`]:  csv,
+        [`${RESULT_DIR}/html/scenario2-circuit-breaker_${RUN_TAG}.html`]: html,
     };
 }
