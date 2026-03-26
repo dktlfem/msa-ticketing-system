@@ -16,6 +16,13 @@ dependencies {
         exclude group: 'org.apache.tomcat.embed', module: 'tomcat-embed-core'
     }
 
+    // ADR: common-module → spring-boot-starter-security → spring-security-web이
+    // jakarta.servlet-api를 전이시키지만, exclude로 인해 런타임에 누락됨.
+    // Spring이 common-module 클래스를 리플렉션 스캔할 때 ClassNotFoundException 발생.
+    // 서블릿 API만 추가하면 DispatcherServlet이 없으므로(spring-webmvc 제외됨)
+    // Spring Boot는 여전히 Reactive Security만 활성화함.
+    implementation 'jakarta.servlet:jakarta.servlet-api'
+
     // WebFlux 도입 (Netty 엔진 사용)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
