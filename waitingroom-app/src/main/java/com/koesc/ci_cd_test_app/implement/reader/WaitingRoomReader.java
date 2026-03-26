@@ -31,7 +31,11 @@ public class WaitingRoomReader {
     }
 
     public WaitingToken findTokenByUser(Long userId, Long eventId) {
-        return waitingTokenRepository.findByUserIdAndEventId(userId, eventId)
+        // ADR: ACTIVE 토큰만 조회하여 NonUniqueResultException 방지
+        // 같은 userId+eventId에 USED/EXPIRED 토큰이 복수 존재할 수 있으므로
+        // findFirst + status 필터로 단일 결과 보장
+        return waitingTokenRepository.findFirstByUserIdAndEventIdAndStatusOrderByIssuedAtDesc(
+                        userId, eventId, com.koesc.ci_cd_test_app.domain.WaitingTokenStatus.ACTIVE)
                 .map(waitingRoomMapper::toDomain)
                 .orElse(null);
     }

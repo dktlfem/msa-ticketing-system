@@ -14,8 +14,13 @@ import java.util.Optional;
 
 public interface WaitingTokenRepository extends JpaRepository<WaitingTokenEntity, String> {
 
-    // 복합 인덱스(idx_user_event)를 타게 됨 -> 고속 조회 가능
-    Optional<WaitingTokenEntity> findByUserIdAndEventId(Long userId, Long eventId);
+    // ADR: findByUserIdAndEventId → findFirst...AndStatus 변경
+    // 사유: 같은 userId+eventId로 USED/EXPIRED 토큰이 복수 존재할 때
+    //       Optional 반환 쿼리가 NonUniqueResultException 발생.
+    //       createToken()에서 ACTIVE 토큰 재사용 여부만 확인하므로
+    //       status=ACTIVE 필터 + findFirst로 안전하게 단일 결과 보장.
+    Optional<WaitingTokenEntity> findFirstByUserIdAndEventIdAndStatusOrderByIssuedAtDesc(
+            Long userId, Long eventId, WaitingTokenStatus status);
 
     // 중복 진입 방지용 검증 메서드
     boolean existsByEventIdAndUserIdAndStatus(Long eventId, Long userId, WaitingTokenStatus status);
