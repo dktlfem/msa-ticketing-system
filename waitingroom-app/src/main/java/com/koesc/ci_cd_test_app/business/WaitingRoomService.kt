@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
-import java.time.LocalDateTime
 import java.util.Optional
 
 @Service
@@ -107,9 +106,7 @@ class WaitingRoomService(
                     }.subscribeOn(Schedulers.boundedElastic())
                         .flatMap { optToken ->
                             val token = optToken.orElse(null)
-                            if (token != null
-                                && token.getExpiredAt() != null
-                                && token.getExpiredAt().isAfter(LocalDateTime.now())) {
+                            if (token != null && token.isValid) {
                                 // 유효한 ACTIVE 토큰이 이미 존재 → 바로 반환
                                 Mono.just(WaitingRoomResponseDTO.allowed(token))
                             } else {
