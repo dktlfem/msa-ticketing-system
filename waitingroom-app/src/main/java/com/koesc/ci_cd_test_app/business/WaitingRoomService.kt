@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
+import java.time.LocalDateTime
+import java.util.Optional
 
 @Service
 class WaitingRoomService(
@@ -93,12 +95,26 @@ class WaitingRoomService(
                         }
                     }
             }
-            // 4. [NPE 방어] 대기열에 정보가 없으면(Empty) 신규 진입 시도
+            // 4. [NPE 방어] 대기열에 정보가 없으면(Empty):
+            //    ADR: 토큰 발급 후 ZREM으로 대기열에서 제거되면 rank가 empty.
+            //    기존 ACTIVE 토큰이 있으면 반환, 없으면 대기열 재진입.
             .switchIfEmpty(
                 Mono.defer {
-                    joinQueue(eventId, userId)
-                        .map { newRank ->
-                            WaitingRoomResponseDTO.waiting(newRank, waitingRoomCalculator.calculate(newRank))
+                    Mono.fromCallable {
+                        Optional.ofNullable(waitingRoomReader.findTokenByUser(userId, eventId))
+                    }.subscribeOn(Schedulers.boundedElastic())
+                        .flatMap { optToken ->
+                            val token = optToken.orElse(null)
+                            if (token != null
+                                && token.getExpiredAt() != null
+                                && token.getExpiredAt().isAfter(LocalDateTime.now())) {
+                                Mono.just(WaitingRoomResponseDTO.allowed(token))
+                            } else {
+                                joinQueue(eventId, userId)
+                                    .map { newRank ->
+                                        WaitingRoomResponseDTO.waiting(newRank, waitingRoomCalculator.calculate(newRank))
+                                    }
+                            }
                         }
                 }
             )
