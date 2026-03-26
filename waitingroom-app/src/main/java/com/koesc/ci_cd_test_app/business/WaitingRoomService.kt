@@ -97,7 +97,7 @@ class WaitingRoomService(
             }
             // 4. [NPE 방어] 대기열에 정보가 없으면(Empty):
             //    ADR: 토큰 발급 후 ZREM으로 대기열에서 제거되면 rank가 empty.
-            //    이 경우 기존 ACTIVE 토큰이 있으면 반환, 없으면 대기열 재진입.
+            //    기존 ACTIVE 토큰이 있으면 반환, 없으면 대기열 재진입.
             //    기존 joinQueue만 호출하면 validateDuplicateAccess에서
             //    ACTIVE 토큰 중복 검증에 걸려 fallback 발동되는 버그가 있었음.
             .switchIfEmpty(
@@ -108,8 +108,8 @@ class WaitingRoomService(
                         .flatMap { optToken ->
                             val token = optToken.orElse(null)
                             if (token != null
-                                && token.expiredAt != null
-                                && token.expiredAt.isAfter(LocalDateTime.now())) {
+                                && token.getExpiredAt() != null
+                                && token.getExpiredAt().isAfter(LocalDateTime.now())) {
                                 // 유효한 ACTIVE 토큰이 이미 존재 → 바로 반환
                                 Mono.just(WaitingRoomResponseDTO.allowed(token))
                             } else {
