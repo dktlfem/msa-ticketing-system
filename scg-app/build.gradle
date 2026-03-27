@@ -45,6 +45,12 @@ dependencies {
 
     // Structured Logging — BOM 비관리, 버전 명시
     implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+
+    // ADR-0009: Spring Cloud Config Client
+    // Gateway 라우팅 설정(Rate Limit 값, CORS origin, JWT secret 등)을 Config Server에서
+    // 동적으로 주입받아 SCG 재시작 없이 반영한다.
+    // optional: Config Server가 없는 환경(로컬 개발)에서도 기동 가능하도록 optional import 사용.
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
 }
 
 // 테스트

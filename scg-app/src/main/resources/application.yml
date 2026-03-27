@@ -10,6 +10,23 @@ spring:
     web-application-type: reactive
   lifecycle:
     timeout-per-shutdown-phase: 30s
+
+  # ─── Spring Cloud Config Client (ADR-0009) ───────────────────────
+  # Config Server가 없는 환경(로컬, 테스트)에서도 기동 가능하도록 optional: 접두사 사용.
+  # Config Server가 존재하면 rate-limiter 값, CORS origin, jwt-secret 등을
+  # 애플리케이션 재시작 없이 /actuator/refresh 또는 Spring Cloud Bus로 반영 가능.
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URI:}"
+
+  cloud:
+    config:
+      # Config Server가 없을 때 기동을 막지 않음 (fail-fast: false)
+      # 운영 환경: CONFIG_SERVER_URI 환경변수로 주입하여 활성화
+      fail-fast: false
+      uri: ${CONFIG_SERVER_URI:}
+      label: main
+      profile: ${SPRING_PROFILES_ACTIVE:default}
+
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:192.168.124.101}
@@ -17,6 +34,16 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:}
   cloud:
     gateway:
+      # ─── HTTP Client 타임아웃 (ADR-0010) ──────────────────────────────
+      # connect-timeout: 내부 서비스 TCP 연결 수립 최대 대기 (ms).
+      #   5초 초과 시 서비스 인스턴스 자체가 비정상으로 판단. CB 카운트에 반영.
+      # response-timeout: 연결 수립 후 첫 바이트 수신까지 최대 대기 (Duration).
+      #   글로벌 기본값 10s. 서비스별 SLO에 따라 route metadata로 오버라이드.
+      #   [k6 부하테스트 이후 실측 p99 기반으로 재조정 예정]
+      httpclient:
+        connect-timeout: 5000    # 5s (ms 단위)
+        response-timeout: 10s    # 글로벌 기본값: user, concert, waitingroom 적용
+
       # ─── Body Size 제한 ─────────────────────────────────────────────
       default-filters:
         - name: RequestSize
@@ -30,7 +57,7 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                key-resolver: "#{@remoteAddrKeyResolver}"
+                key-resolver: "#{@principalOrIpKeyResolver}"
                 redis-rate-limiter.replenishRate: 30
                 redis-rate-limiter.burstCapacity: 50
                 redis-rate-limiter.requestedTokens: 1
@@ -65,7 +92,7 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                key-resolver: "#{@remoteAddrKeyResolver}"
+                key-resolver: "#{@principalOrIpKeyResolver}"
                 redis-rate-limiter.replenishRate: 30
                 redis-rate-limiter.burstCapacity: 50
                 redis-rate-limiter.requestedTokens: 1
@@ -94,12 +121,17 @@ spring:
 
         - id: booking-service
           uri: http://booking-app:8080
+          # ADR-0010: 분산락(Redisson) 획득 대기 + waitingroom 검증 시간 고려.
+          # 글로벌 10s로는 p99 락 경합 시나리오에서 false-timeout 발생 가능.
+          # 15s는 보수적 초기값. k6 부하테스트 p99 실측 후 재조정.
+          metadata:
+            response-timeout: 15000  # 15s (global 10s override, ms 단위)
           predicates:
             - Path=/api/v1/reservations/**,/api/v1/users/me/reservations
           filters:
             - name: RequestRateLimiter
               args:
-                key-resolver: "#{@remoteAddrKeyResolver}"
+                key-resolver: "#{@principalOrIpKeyResolver}"
                 redis-rate-limiter.replenishRate: 20
                 redis-rate-limiter.burstCapacity: 40
                 redis-rate-limiter.requestedTokens: 1
@@ -137,7 +169,7 @@ spring:
           filters:
             - name: RequestRateLimiter
               args:
-                key-resolver: "#{@remoteAddrKeyResolver}"
+                key-resolver: "#{@principalOrIpKeyResolver}"
                 redis-rate-limiter.replenishRate: 100
                 redis-rate-limiter.burstCapacity: 200
                 redis-rate-limiter.requestedTokens: 1
@@ -166,12 +198,16 @@ spring:
 
         - id: payment-service
           uri: http://payment-app:8080
+          # ADR-0010: TossPayments 외부 API SLA 10s 명시적 반영.
+          # 글로벌 10s와 동일하지만, 향후 SLA 변경 시 이 값만 수정하도록 의도적으로 명시.
+          metadata:
+            response-timeout: 10000  # 10s (TossPayments SLA, ms 단위)
           predicates:
             - Path=/api/v1/payments/**
           filters:
             - name: RequestRateLimiter
               args:
-                key-resolver: "#{@remoteAddrKeyResolver}"
+                key-resolver: "#{@principalOrIpKeyResolver}"
                 redis-rate-limiter.replenishRate: 5
                 redis-rate-limiter.burstCapacity: 10
                 redis-rate-limiter.requestedTokens: 1
@@ -205,7 +241,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,prometheus
+        # gateway: /actuator/gateway/routes — 운영 환경에서 라우팅 설정 실시간 확인용.
+        # 외부 노출 차단은 oauth2-proxy + InternalPathBlockFilter(/internal/**)로 처리.
+        # (ADR-0010: /actuator/gateway 노출 정책 — oauth2-proxy 인증 경유로 결정)
+        include: health,prometheus,gateway
   # CircuitBreaker 상태를 /actuator/health 에 노출 (UP/CIRCUIT_BREAKER_OPEN 등)
   health:
     circuitbreakers:
@@ -230,10 +269,12 @@ gateway:
 
     # ─── Request Sanitize ────────────────────────────────────────────
     # 클라이언트가 위조해서는 안 되는 내부 인증 헤더 제거 대상 (ADR-0007 Phase 3)
+    # SCG가 검증 후 주입하는 Auth-* 헤더는 반드시 여기서 먼저 제거해야 한다.
     sanitize-headers:
-      - Auth-Passport
-      - Auth-User-Id
-      - Internal-Token
+      - Auth-Passport      # JwtAuthenticationFilter(+4) 검증 후 재발급
+      - Auth-User-Id       # JwtAuthenticationFilter(+4) 검증 후 재발급
+      - Internal-Token     # 서비스 간 내부 통신 전용
+      - Auth-Queue-Token   # QueueTokenValidationFilter(+5) 형식 검증 후 재발급 (ADR-0008)
 
     # ─── JWT Authentication ──────────────────────────────────────────
     # jwt-secret: 최소 32바이트(256bit). 운영 환경에서는 환경변수로 주입할 것.
@@ -260,3 +301,14 @@ gateway:
       - Cookie
       - X-Api-Key
       - X-Auth-Token
+
+  # ─── Queue Token Validation (ADR-0008) ─────────────────────────────
+  # 예약(booking-service) 접근 전 Gateway 레벨에서 대기열 토큰 헤더를 검증한다.
+  # 책임 분리:
+  #   - SCG(여기): Queue-Token 헤더 존재 여부 + UUID 형식 검증 (Fail-Fast)
+  #   - booking-app: 토큰의 실제 유효성(ACTIVE 상태, 만료 여부, userId/eventId 일치) 검증
+  # enabled: false 설정 시 필터 비활성화 (로컬 개발·통합 테스트 편의)
+  queue-token:
+    enabled: ${QUEUE_TOKEN_VALIDATION_ENABLED:true}
+    protected-paths:
+      - /api/v1/reservations/**
