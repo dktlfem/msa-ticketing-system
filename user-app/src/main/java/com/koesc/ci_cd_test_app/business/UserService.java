@@ -6,6 +6,7 @@ import com.koesc.ci_cd_test_app.domain.User;
 import com.koesc.ci_cd_test_app.implement.manager.UserManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,13 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserManager userManager;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponseDTO signUp(UserRequestDTO request) {
 
         // 1. RequestDTO -> Domain (도메인 모델의 정적 팩토리 메서드 사용)
-        // 비밀번호는 추후 인코딩 로직 추가 예정 BCryptPasswordEncoder
-        User user = User.create(request.email(), request.name(), request.password());
+        // ADR: BCrypt로 비밀번호 해싱 후 저장 — 평문 저장 방지
+        String encodedPassword = passwordEncoder.encode(request.password());
+        User user = User.create(request.email(), request.name(), encodedPassword);
 
         // 2. Manager를 통해 비즈니스 프로세스 실행
         User savedUser = userManager.register(user);

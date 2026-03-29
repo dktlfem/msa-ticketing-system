@@ -6,15 +6,28 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // 빈이 생성될 때 무조건 로그를 찍게 만듦.
     public SecurityConfig() {
         System.out.println("[DEBUG] SecurityConfig Bean is being created!");
+    }
+
+    /**
+     * ADR: BCrypt 비밀번호 인코더
+     *
+     * - BCrypt는 salt를 내장하여 동일 비밀번호도 매번 다른 해시를 생성 → Rainbow Table 공격 방어
+     * - cost factor(기본 10)로 해싱 비용 조절 가능 → 브루트포스 공격 지연
+     * - Spring Security 표준 PasswordEncoder 구현체
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -39,7 +52,7 @@ public class SecurityConfig {
                         // DispatcherType.ERROR를 허용 (내부 에러 발생 시 리다이렉트 허용)
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // 1. Actuator 및 API 경로 전체 허용
-                        .requestMatchers("/api/v1/waiting-room/**", "/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/waiting-room/**", "/api/v1/**", "/error", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )

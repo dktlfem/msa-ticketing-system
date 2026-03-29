@@ -6,6 +6,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0' // MVC 전용 Swagger
 
+    // ADR: Lettuce 스핀락 대비 pub/sub 방식으로 CPU 낭비 없는 분산락 제공.
+    // Spring Boot 3.4.x 호환 버전. starter 사용 시 RedissonClient Bean을 직접 정의하면
+    // auto-configuration이 back-off되어 충돌 없이 동작한다.
+    implementation 'org.redisson:redisson-spring-boot-starter:3.27.2'
+
     runtimeOnly 'com.mysql:mysql-connector-j'
 }
 

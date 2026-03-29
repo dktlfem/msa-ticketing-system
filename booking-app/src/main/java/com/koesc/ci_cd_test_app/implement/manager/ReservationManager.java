@@ -2,6 +2,8 @@ package com.koesc.ci_cd_test_app.implement.manager;
 
 import com.koesc.ci_cd_test_app.domain.Reservation;
 import com.koesc.ci_cd_test_app.domain.ReservationStatus;
+import com.koesc.ci_cd_test_app.global.error.ErrorCode;
+import com.koesc.ci_cd_test_app.global.error.exception.BusinessException;
 import com.koesc.ci_cd_test_app.implement.client.ConcertSeatInternalClient;
 import com.koesc.ci_cd_test_app.implement.client.WaitingRoomInternalClient;
 import com.koesc.ci_cd_test_app.implement.reader.ReservationReader;
@@ -9,12 +11,15 @@ import com.koesc.ci_cd_test_app.implement.validator.ReservationValidator;
 import com.koesc.ci_cd_test_app.implement.writer.ReservationWriter;
 import com.koesc.ci_cd_test_app.storage.entity.ReservationEntity;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -23,28 +28,83 @@ public class ReservationManager {
     private static final long DEFAULT_HOLD_MINUTES = 5L;
     private static final String BOOKING_SERVICE = "booking-service";
 
+    /**
+     * ADR: 분산락 키 설계 — reservation:lock:seat:{seatId}
+     *
+     * 락 범위를 seatId 단위로 설정한 이유:
+     * - userId 기준으로 걸면 다른 사용자가 동일 좌석에 동시 접근하는 경우를 막지 못함.
+     * - seatId 기준으로 걸면 특정 좌석에 대한 모든 예약 요청이 직렬화되어 중복 HOLD를 원천 차단.
+     * - concert-app의 낙관적 락(@Version)이 2차 방어선으로 동작하여 defense-in-depth 구성.
+     *
+     * waitTime=5s: 락 대기 상한. 초과 시 즉시 실패(429)하여 클라이언트에 빠른 피드백 제공.
+     * leaseTime=15s: SCG booking-service response-timeout(15s)과 일치.
+     *   네트워크/GC 장애로 락 해제가 누락되더라도 SCG 타임아웃과 동시에 자동 만료 → 데드락 방지.
+     */
+    private static final String SEAT_LOCK_KEY_FORMAT = "reservation:lock:seat:%d";
+    private static final long LOCK_WAIT_TIME_SECONDS = 5L;
+    private static final long LOCK_LEASE_TIME_SECONDS = 15L;
+
     private final ReservationReader reservationReader;
     private final ReservationWriter reservationWriter;
     private final ReservationValidator reservationValidator;
 
     private final WaitingRoomInternalClient waitingRoomInternalClient;
     private final ConcertSeatInternalClient concertSeatInternalClient;
+    private final RedissonClient redissonClient;
 
     /**
      * 유즈케이스 A) 예약 생성
-     * - 좌석 HOLD, Waiting Token 검증은 상위 유즈 케이스(또는 다른 서비스 orchestration)에서 처리한다고 가정
      *
      * 흐름:
-     * 1. seat 상세 조회 -> eventId 확보
-     * 2. waitingroom 토큰 검증
-     * 3. concert-app에 좌석 HOLD 요청
-     * 4. booking DB에 reservation 저장 + flush
-     * 5. waitingroom 토큰 consume
-     * 6. 중간 실패 시 좌석 RELEASE 보상
+     * 1. Redisson 분산락 획득 (seat 단위)
+     * 2. seat 상세 조회 → eventId 확보
+     * 3. waitingroom 토큰 검증
+     * 4. concert-app에 좌석 HOLD 요청
+     * 5. booking DB에 reservation 저장 + flush
+     * 6. waitingroom 토큰 consume
+     * 7. 중간 실패 시 좌석 RELEASE 보상
+     * 8. finally에서 분산락 해제
+     *
+     * [동시성 제어 3단계]
+     * 1단계(booking-app): Redisson 분산락 → 동일 seatId 요청 직렬화
+     * 2단계(concert-app): 낙관적 락(@Version) → DB 레벨 race condition 방어
+     * 3단계(payment-app): 비관적 락(SELECT FOR UPDATE) → 결제 최종 확정 시 정합성 보장
      */
     public Reservation createReservation(Long userId, String waitingToken, Long seatId) {
         reservationValidator.validateCreateRequest(userId, seatId);
 
+        String lockKey = String.format(SEAT_LOCK_KEY_FORMAT, seatId);
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean acquired = false;
+
+        try {
+            acquired = lock.tryLock(LOCK_WAIT_TIME_SECONDS, LOCK_LEASE_TIME_SECONDS, TimeUnit.SECONDS);
+
+            if (!acquired) {
+                // 다른 요청이 이미 해당 좌석에 대한 락을 보유 중 → 즉시 실패
+                throw new BusinessException(ErrorCode.RESERVATION_LOCK_CONFLICT);
+            }
+
+            return doCreateReservation(userId, waitingToken, seatId);
+
+        } catch (InterruptedException e) {
+            // 락 대기 중 스레드 인터럽트 → 스레드 상태 복원 후 예약 거부
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.RESERVATION_LOCK_CONFLICT);
+        } finally {
+            // 락 보유 중인 스레드에서만 해제 (isHeldByCurrentThread 검증으로 타 스레드 해제 방지)
+            if (acquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    /**
+     * 실제 예약 생성 로직 (분산락 획득 후 호출)
+     * 좌석 HOLD → DB 저장 → 토큰 consume 순서를 보장하며,
+     * 저장 실패 시 좌석 HOLD를 롤백하는 Saga 보상 트랜잭션 포함.
+     */
+    private Reservation doCreateReservation(Long userId, String waitingToken, Long seatId) {
         ConcertSeatInternalClient.ConcertSeatDetail seatDetail =
                 concertSeatInternalClient.readSeat(seatId);
 
@@ -73,13 +133,13 @@ public class ReservationManager {
 
             Reservation saved = reservationWriter.saveWithFlush(reservation);
 
-            // 3. 예약 저장 성공 후 토큰 사용 처리
+            // 3. 예약 저장 성공 후 토큰 사용 처리 (멱등성: 저장 성공 후 consume으로 재처리 안전)
             waitingRoomInternalClient.consumeToken(waitingToken, BOOKING_SERVICE);
 
             return saved;
         } catch (RuntimeException e) {
             try {
-                // 예약 저장 실패 시 좌석 점유 복구
+                // [Saga 보상] 예약 저장 실패 시 좌석 점유 복구
                 concertSeatInternalClient.releaseSeat(seatId);
             } catch (RuntimeException compensationException) {
                 e.addSuppressed(compensationException);
