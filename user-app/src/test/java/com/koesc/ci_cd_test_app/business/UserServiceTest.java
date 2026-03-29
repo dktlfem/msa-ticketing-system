@@ -10,9 +10,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -22,6 +24,9 @@ public class UserServiceTest {
 
     @Mock
     private UserManager userManager;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -37,6 +42,9 @@ public class UserServiceTest {
                 .email("test@toss.im")
                 .name("최민석")
                 .build();
+
+        // BCrypt 인코딩 모킹
+        given(passwordEncoder.encode(anyString())).willReturn("$2a$10$encodedPassword");
 
         // Manager가 register를 호출하면 savedUser를 반환할 것이라고 가정
         given(userManager.register(any(User.class))).willReturn(savedUser);
