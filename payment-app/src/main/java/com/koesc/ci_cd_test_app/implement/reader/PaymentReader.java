@@ -41,4 +41,15 @@ public class PaymentReader {
     public boolean existsByReservationId(Long reservationId) {
         return paymentRepository.existsByReservationId(reservationId);
     }
+
+    /**
+     * 특정 상태의 결제 목록 조회.
+     * CANCEL_FAILED 복구 스케줄러에서 사용한다.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<Payment> readAllByStatus(com.koesc.ci_cd_test_app.domain.PaymentStatus status) {
+        return paymentRepository.findAllByStatus(status).stream()
+                .map(paymentMapper::toDomain)
+                .toList();
+    }
 }

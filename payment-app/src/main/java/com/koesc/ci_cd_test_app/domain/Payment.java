@@ -73,17 +73,22 @@ public class Payment {
     }
 
     /**
-     * APPROVED → REFUNDED
+     * APPROVED 또는 CANCEL_FAILED → REFUNDED
      * PG 취소 성공 시 호출한다.
+     * CANCEL_FAILED 상태에서도 스케줄러 재시도로 복구 가능하다.
      */
     public Payment completeCancel(LocalDateTime cancelledAt) {
-        if (!isApproved()) {
+        if (!isApproved() && !isCancelFailed()) {
             throw new IllegalStateException("Cannot cancel payment in status: " + status);
         }
         return toBuilder()
                 .status(PaymentStatus.REFUNDED)
                 .cancelledAt(cancelledAt)
                 .build();
+    }
+
+    public boolean isCancelFailed() {
+        return status == PaymentStatus.CANCEL_FAILED;
     }
 
     /**
