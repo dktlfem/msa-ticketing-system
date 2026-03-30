@@ -113,38 +113,39 @@ const sagaTxRate     = new Rate('saga_tx_complete_rate');
 // ── 테스트 옵션 ──────────────────────────────────────────────
 export const options = {
     scenarios: {
-        // ADR: 스테이징 환경에서는 DB에 생성한 테스트 예약(1000~1199)을 사용.
-        // VU × iter별로 고유 reservationId를 매핑하여 충돌 방지.
         normal_load: {
             executor: 'constant-vus',
-            vus: 3,
-            duration: '10s',
+            vus: 10,
+            duration: '15s',
             exec: 'sagaFlowPhase',
             tags: { phase: 'normal' },
         },
         stress_load: {
             executor: 'constant-vus',
-            vus: 5,
-            duration: '10s',
-            startTime: '14s',
+            vus: 30,
+            duration: '20s',
+            startTime: '18s',
             exec: 'sagaFlowPhase',
             tags: { phase: 'stress' },
         },
         recovery_check: {
             executor: 'per-vu-iterations',
-            vus: 3,
+            vus: 5,
             iterations: 1,
-            startTime: '28s',
+            startTime: '42s',
             exec: 'recoveryCheckPhase',
             tags: { phase: 'recovery' },
             maxDuration: '15s',
         },
     },
     thresholds: {
-        // ADR: tx_complete = pay_request 성공 기준 (confirm은 외부 PG 의존으로 분리).
-        'saga_tx_complete_rate':     ['rate>0.50'],     // 내부 시스템 결제 생성 성공률 > 50%
+        // 결제 트랜잭션 완료율 > 30% (PG/booking 실패로 일부 실패 허용)
+        'saga_tx_complete_rate':   ['rate>0.30'],
+        // 결제 요청 P95
         'saga_pay_request_duration': ['p(95)<3000'],
+        // 결제 승인 P95 (PG 외부 호출 포함)
         'saga_pay_confirm_duration': ['p(95)<5000'],
+        // 5xx 에러율
         'saga_server_error_rate':    ['rate<0.10'],
     },
 };
@@ -153,11 +154,9 @@ export const options = {
 export function setup() {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`[Saga 보상 트랜잭션 부하 검증] 시작`);
-    console.log(`  Phase 1 (Normal):  3 VU × 10s`);
-    console.log(`  Phase 2 (Stress):  5 VU × 10s`);
-    console.log(`  Phase 3 (Recovery): 3 VU × 결제 상태 확인`);
-    console.log(`  예약 데이터: reservationId=1000~1199 (user_id=reservation_id)`);
-    console.log(`  ※ 스테이징 환경: TossPayments 401 → PG 승인 항상 실패 → FAILED 상태 예상`);
+    console.log(`  Phase 1 (Normal):  10 VU × 15s`);
+    console.log(`  Phase 2 (Stress):  30 VU × 20s`);
+    console.log(`  Phase 3 (Recovery): 5 VU × 결제 상태 확인`);
     console.log(`  Saga 흐름: PG 승인 → booking confirm → (실패 시) PG 취소 → REFUNDED/CANCEL_FAILED`);
     console.log(`${'='.repeat(60)}\n`);
     return {};
@@ -167,11 +166,8 @@ export function setup() {
 export function sagaFlowPhase() {
     const vuId = __VU;
     const iter = __ITER;
-    // ADR: DB에 생성한 테스트 예약(1000~1199)을 VU×iter별로 고유 매핑.
-    // user_id = reservation_id로 설정하여 소유자 검증(R001) 통과.
-    // 범위 초과 방지: 200건 내에서 순환 (modulo).
-    const reservationId = 1000 + ((vuId - 1) * 20 + iter) % 200;
-    const userId = reservationId;               // reservation 소유자와 일치
+    const userId = 1000 + vuId * 10 + iter;
+    const reservationId = userId;               // 간이 매핑
     const token = generateJwt(userId);
     const passport = generateAuthPassport(userId);
 
@@ -198,9 +194,6 @@ export function sagaFlowPhase() {
     if (reqRes.status !== 200 && reqRes.status !== 201) {
         classifyError(reqRes, 'pay_request');
         sagaTxRate.add(0);
-        // ADR: 실패 시에도 sleep하여 빠른 반복 루프 방지.
-        // sleep 없으면 VU가 초당 수백 건 실패 요청을 생성하여 메트릭을 왜곡.
-        sleep(0.5);
         return;
     }
     payRequestSuccess.add(1);
@@ -216,20 +209,69 @@ export function sagaFlowPhase() {
         amount = 50000;
     }
 
-    // ADR: pay_request 성공 = 내부 시스템 트랜잭션 완료 기준.
-    // 스테이징 환경에서 TossPayments API 키 부재 → confirm 시 401 → SCG CB OPEN.
-    // SCG CB는 route 단위(/api/v1/payments/**)로 동작하여, confirm 실패가
-    // request 라우트까지 차단시키는 연쇄 장애를 유발함 (시나리오 9에서 확인).
-    // 따라서 confirm 호출을 스테이징에서 완전히 분리하고, pay_request 성공을 tx_complete로 간주.
-    sagaTxComplete.add(1);
-    sagaTxRate.add(1);
-    serverErrorRate.add(0);
+    sleep(0.2);
 
-    // ADR: confirm(PG 호출)은 스테이징에서 생략.
-    // 이유: 1건만 호출해도 SCG CB가 payment 라우트 전체를 OPEN 처리하여
-    // 이후 pay_request까지 503 fallback으로 차단됨.
-    // 프로덕션에서는 confirm → Saga 보상 플로우가 정상 동작하며,
-    // Saga 보상 로직의 단위 테스트(@SpringBootTest)로 별도 검증 완료.
+    // ── Step 2: 결제 승인 (Saga 트리거 포인트) ────────────────
+    // ADR: confirmPayment는 내부에서:
+    //   1. TossPayments PG 승인 호출
+    //   2. booking-app confirm 호출
+    //   3. 실패 시 PG 취소 (보상 트랜잭션)
+    //   4. PG 취소도 실패 시 CANCEL_FAILED → 스케줄러 복구
+    const confirmKey = generateUUID();
+    const confirmRes = http.post(
+        `${SCG_BASE_URL}/api/v1/payments/confirm`,
+        JSON.stringify({
+            paymentKey: `toss-saga-${userId}-${Date.now()}`,
+            orderId: orderId,
+            amount: amount,
+        }),
+        {
+            headers: {
+                'Content-Type': 'application/json',
+                'Idempotency-Key': confirmKey,
+            },
+            tags: { step: 'pay_confirm' },
+            timeout: '15s',
+        }
+    );
+    payConfirmDuration.add(confirmRes.timings.duration);
+
+    if (confirmRes.status === 200) {
+        payConfirmSuccess.add(1);
+        serverErrorRate.add(0);
+
+        // 응답에서 결제 상태 확인
+        try {
+            const body = JSON.parse(confirmRes.body);
+            const status = body.status;
+            if (status === 'APPROVED')       statusApproved.add(1);
+            else if (status === 'REFUNDED')  statusRefunded.add(1);
+            else if (status === 'FAILED')    statusFailed.add(1);
+            else if (status === 'CANCEL_FAILED') statusCancelFailed.add(1);
+            else                              statusOther.add(1);
+        } catch (e) { /* 파싱 실패 시 무시 */ }
+
+        sagaTxComplete.add(1);
+        sagaTxRate.add(1);
+
+    } else if (confirmRes.status >= 400 && confirmRes.status < 500) {
+        // 비즈니스 에러 (PG 거절, 예약 상태 불일치 등)
+        payConfirmFail.add(1);
+        serverErrorRate.add(0);
+        sagaTxRate.add(0);
+
+    } else if (confirmRes.status >= 500) {
+        payConfirmFail.add(1);
+        serverErrorCount.add(1);
+        serverErrorRate.add(1);
+        sagaTxRate.add(0);
+        console.error(`[SAGA] VU${vuId}: 5xx on confirm status=${confirmRes.status}`);
+
+    } else {
+        payConfirmFail.add(1);
+        serverErrorRate.add(0);
+        sagaTxRate.add(0);
+    }
 
     sleep(0.5);
 }
@@ -304,7 +346,7 @@ export function handleSummary(data) {
     const srvErr   = m('saga_server_error', 'count');
     const srvRate  = m('saga_server_error_rate', 'rate');
 
-    const passTxRate  = txRate > 0.50;
+    const passTxRate  = txRate > 0.30;
     const passErrRate = srvRate < 0.10;
     const overallPass = passTxRate && passErrRate;
 
@@ -410,7 +452,7 @@ export function handleSummary(data) {
   .arch pre{margin:0;font-size:.85rem;line-height:1.6;white-space:pre-wrap}
 </style></head><body>
 <h1>Saga 보상 트랜잭션 부하 검증 — 시나리오 11 <span class="badge">${passText}</span></h1>
-<p style="color:#6b7280;font-size:.85rem">${testDate} | ${SCG_BASE_URL} | Normal 3VU + Stress 5VU</p>
+<p style="color:#6b7280;font-size:.85rem">${testDate} | ${SCG_BASE_URL} | Normal 10VU + Stress 30VU</p>
 
 <h2>Saga 보상 트랜잭션 상태 머신</h2>
 <div class="arch"><pre>
@@ -456,8 +498,8 @@ ${cancelFailed > 0 ? '<div class="warn">CANCEL_FAILED ' + cancelFailed + '건 �
 
 <h2>분석</h2>
 ${diagnostics.length > 0
-    ? diagnostics.map(d => `<div class="diag"><h3>${d.symptom}</h3><ol>${d.causes.map(c => `<li>${c.text}<br><small>${c.check}</small></li>`).join('')}</ol></div>`).join('')
-    : passNotes.map(n => `<div class="note">${n}</div>`).join('')}
+    ? diagnostics.map(d => \`<div class="diag"><h3>\${d.symptom}</h3><ol>\${d.causes.map(c => \`<li>\${c.text}<br><small>\${c.check}</small></li>\`).join('')}</ol></div>\`).join('')
+    : passNotes.map(n => \`<div class="note">\${n}</div>\`).join('')}
 
 <h2>DB 최종 검증 (테스트 후 수동 확인)</h2>
 <div class="arch"><pre>
@@ -475,7 +517,7 @@ WHERE p.status = 'APPROVED' AND r.status != 'CONFIRMED';
 -- 결과가 0건이면 데이터 정합성 보장
 </pre></div>
 
-<p class="meta">Generated by k6 scenario11-saga-compensation.js | Normal 3VU + Stress 5VU (staging: TossPayments 401)</p>
+<p class="meta">Generated by k6 scenario11-saga-compensation.js | Normal 10VU + Stress 30VU</p>
 </body></html>`;
 
     const consoleMsg = [

@@ -14,17 +14,12 @@
 // 테스트 설계:
 //   각 VU는 고유 userId와 고유 seatId를 사용 → 서비스 간 경합 최소화
 //   E2E 성공률과 각 단계별 레이턴시 측정에 집중
-//   6 VU × 1 iteration = 6 E2E 트랜잭션 시도
-//   ADR: iterations=1로 고정. 같은 VU가 재시도(iter1+)하면 waiting-room-app의
-//        토큰 상태 관리(이전 토큰 미소비)로 WAITING_TOKEN_INVALID 발생.
-//        VU별 1회 실행으로 토큰 라이프사이클 충돌을 회피.
-//        VU 기반 스태거 딜레이로 concert-app Bulkhead 초과도 방지.
+//   10 VU × 3 iterations = 30 E2E 트랜잭션 시도
 //
 // 판단 기준:
-//   E2E 성공률 > 50% (Step4 결제요청까지를 완주 기준)
+//   E2E 성공률 > 50% (인프라/설정 문제로 일부 실패 허용)
 //   각 단계별 p95 < 2000ms
-//   5xx 에러율 < 30% (Bulkhead/CB에 의한 정상 리젝션 허용)
-//   Step5(PG 승인)는 외부 의존성이므로 optional (스테이징 환경 한계)
+//   5xx 에러율 < 5%
 //
 // 면접 핵심 포인트:
 //   Q. "서비스 간 전체 흐름이 실제로 동작하는지 어떻게 검증했나요?"
@@ -47,8 +42,8 @@ import encoding from 'k6/encoding';
 const SCG_BASE_URL    = __ENV.SCG_BASE_URL    || 'http://192.168.124.100:8090';
 const JWT_SECRET      = __ENV.JWT_SECRET      || 'change-me-in-production-must-be-at-least-32-bytes!!';
 const TARGET_EVENT_ID = parseInt(__ENV.TARGET_EVENT_ID || '1');
-const E2E_VUS         = parseInt(__ENV.E2E_VUS || '2');
-const E2E_ITERATIONS  = parseInt(__ENV.E2E_ITERATIONS || '1');
+const E2E_VUS         = parseInt(__ENV.E2E_VUS || '10');
+const E2E_ITERATIONS  = parseInt(__ENV.E2E_ITERATIONS || '3');
 const RESULT_DIR      = __ENV.RESULT_DIR      || 'results';
 const RUN_TAG = (() => {
     const d = new Date();
@@ -149,7 +144,7 @@ export const options = {
         },
     },
     thresholds: {
-        // E2E 완주율 > 50% (Step4까지 기준, Bulkhead/CB에 의한 일부 실패 허용)
+        // E2E 완주율 > 50% (외부 PG 호출 등으로 일부 실패 허용)
         'e2e_complete_rate': ['rate>0.50'],
         // 각 단계별 p95 < 2000ms
         'e2e_step1_join_duration':       ['p(95)<2000'],
@@ -158,8 +153,8 @@ export const options = {
         'e2e_step4_pay_request_duration': ['p(95)<2000'],
         // step5 (PG 호출)는 외부 의존성으로 더 넓은 허용
         'e2e_step5_pay_confirm_duration': ['p(95)<5000'],
-        // 5xx 에러율 < 30% (Bulkhead/CB 정상 리젝션 + Step5 PG 실패 허용)
-        'e2e_server_error_rate':          ['rate<0.30'],
+        // 5xx 에러율 < 5%
+        'e2e_server_error_rate':          ['rate<0.05'],
     },
 };
 
@@ -196,10 +191,7 @@ export function e2eFlow() {
     const vuId = __VU;
     const iter = __ITER;
     const userId = vuId * 100 + iter;            // 고유 userId: VU1_ITER0=100, VU1_ITER1=101, ...
-    // ADR: 실제 DB의 seat_id 범위는 11~110 (event_id=1, schedule_id=11 기준 100석).
-    //      seatId = 30 + (vuId-1)*3 + iter → 30~59 범위, 30개 고유 좌석, 경합 없음.
-    //      eventId=1 토큰으로 event_id=1 좌석만 예매 가능 (validateToken eventId 일치 필요).
-    const seatId = 30 + (vuId - 1) * 3 + iter;  // 고유 seatId: 30~59 범위 (event_id=1 소속)
+    const seatId = 300 + userId;                 // 고유 seatId (300번대, 경합 방지)
 
     const token = generateJwt(userId);
     const passport = generateAuthPassport(userId);
@@ -287,12 +279,7 @@ export function e2eFlow() {
     step2Success.add(1);
     console.log(`[E2E] VU${vuId}/iter${iter}: Step2 status OK, tokenId=${tokenId.substring(0, 20)}...`);
 
-    // ADR: VU 기반 스태거 딜레이 — concert-app Bulkhead(maxConcurrentCalls) 초과 방지.
-    //      booking-app → concert-app 호출 시 동시 요청이 Bulkhead 한도를 초과하면 500 반환.
-    //      VU별 1.0s 간격으로 reserve 요청을 순차 분산시켜 Bulkhead 내에서 처리되도록 한다.
-    //      VU1→0.3s, VU2→1.3s, VU3→2.3s, VU4→3.3s, VU5→4.3s
-    const staggerDelay = 0.3 + (vuId - 1) * 1.0;
-    sleep(staggerDelay);
+    sleep(0.3);
 
     // ────────────────────────────────────────────────────────
     // Step 3: 좌석 예매
@@ -379,26 +366,11 @@ export function e2eFlow() {
     }
     console.log(`[E2E] VU${vuId}/iter${iter}: Step4 pay request OK, orderId=${orderId} (${payRequestRes.timings.duration.toFixed(0)}ms)`);
 
-    // ── E2E 완주 (Step4 기준) ────────────────────────────────
-    // ADR: Step5(PG 승인)는 외부 TossPayments API 의존.
-    //      스테이징 환경에 유효한 PG API Key가 없어 항상 401 반환.
-    //      따라서 내부 서비스 E2E(대기열→예매→결제요청)는 Step4까지를 완주 기준으로 측정.
-    //      Step5는 optional로 시도하되 실패해도 E2E 성공에 영향 없음.
-    //      면접 포인트: "외부 PG 의존성을 E2E 테스트에서 어떻게 분리했는지"
-    const e2eTotalMs = Date.now() - e2eStart;
-    e2eTotalDuration.add(e2eTotalMs);
-    e2eCompleteRate.add(1);
-
-    console.log(`[E2E] VU${vuId}/iter${iter}: E2E COMPLETE (${e2eTotalMs}ms, 4-step internal flow)`);
+    sleep(0.3);
 
     // ────────────────────────────────────────────────────────
-    // Step 5 (Optional): 결제 승인 — 외부 PG 연동 검증
-    // ADR: TossPayments 테스트 키가 없는 스테이징 환경에서는 401 예상.
-    //      실패해도 E2E 성공률에 영향 없음. PG 응답 시간만 측정.
+    // Step 5: 결제 승인 (TossPayments 연동)
     // ────────────────────────────────────────────────────────
-    const payStagger = 0.5 + (vuId - 1) * 0.3;
-    sleep(payStagger);
-
     const confirmIdempotencyKey = generateUUID();
     const payConfirmRes = http.post(
         `${SCG_BASE_URL}/api/v1/payments/confirm`,
@@ -409,7 +381,6 @@ export function e2eFlow() {
         }),
         {
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 'Idempotency-Key': confirmIdempotencyKey,
             },
@@ -420,17 +391,24 @@ export function e2eFlow() {
     step5PayConfirmDuration.add(payConfirmRes.timings.duration);
 
     const payConfirmOk = check(payConfirmRes, {
-        '[Step5-Optional] PG 승인 성공': (r) => r.status === 200,
+        '[Step5] 결제 승인 성공': (r) => r.status === 200,
     });
 
-    if (payConfirmOk) {
-        step5Success.add(1);
-        console.log(`[E2E] VU${vuId}/iter${iter}: Step5 PG confirm OK (${payConfirmRes.timings.duration.toFixed(0)}ms)`);
-    } else {
-        // Step5 실패는 기록만 하고 E2E 성공률에 영향 없음
+    if (!payConfirmOk) {
+        classifyError(payConfirmRes, 'step5_pay_confirm');
         stoppedAtStep[5].add(1);
-        console.log(`[E2E] VU${vuId}/iter${iter}: Step5 PG confirm 실패 (expected in staging) status=${payConfirmRes.status}`);
+        e2eCompleteRate.add(0);
+        console.warn(`[E2E] VU${vuId}: Step5 실패 status=${payConfirmRes.status} body=${payConfirmRes.body?.substring(0, 200)}`);
+        return;
     }
+    step5Success.add(1);
+
+    // ── E2E 완주 ─────────────────────────────────────────────
+    const e2eTotalMs = Date.now() - e2eStart;
+    e2eTotalDuration.add(e2eTotalMs);
+    e2eCompleteRate.add(1);
+
+    console.log(`[E2E] VU${vuId}/iter${iter}: COMPLETE (${e2eTotalMs}ms total)`);
 
     sleep(1.0);
 }
@@ -484,10 +462,8 @@ export function handleSummary(data) {
     const srvErrRate = m('e2e_server_error_rate', 'rate');
 
     const passComplete = completeRate > 0.50;
-    const passErrRate  = srvErrRate < 0.30;   // Bulkhead/CB 정상 리젝션 + Step5 PG 실패 허용
+    const passErrRate  = srvErrRate < 0.05;
     const overallPass  = passComplete && passErrRate;
-    // ADR: E2E 완주 = Step4(결제 요청)까지. Step5(PG 승인)는 외부 의존성이므로 별도 측정.
-    const e2eCompleteCount = s4;  // Step4 성공 건수 = E2E 내부 플로우 완주
 
     const testDate = new Date().toISOString();
 
@@ -516,17 +492,16 @@ export function handleSummary(data) {
     const passNotes = [];
     if (overallPass) {
         passNotes.push(
-            `${attempts}건 E2E 시도 중 ${e2eCompleteCount}건 내부 플로우 완주 (${(completeRate*100).toFixed(1)}%). ` +
-            `Step5 PG 승인: ${s5}/${e2eCompleteCount}건. 전체 E2E P95=${e2eP95.toFixed(0)}ms.`
+            `${attempts}건 E2E 시도 중 ${s5}건 완주 (${(completeRate*100).toFixed(1)}%). ` +
+            `전체 E2E P95=${e2eP95.toFixed(0)}ms.`
         );
         passNotes.push(
             `단계별 P95: join=${step1P95.toFixed(0)}ms → status=${step2P95.toFixed(0)}ms → ` +
             `reserve=${step3P95.toFixed(0)}ms → pay_req=${step4P95.toFixed(0)}ms → pay_confirm=${step5P95.toFixed(0)}ms`
         );
         passNotes.push(
-            `면접 포인트: "외부 PG 의존성을 E2E 테스트에서 격리하여 내부 서비스(대기열→예매→결제요청) ` +
-            `안정성을 독립적으로 측정했습니다. ${(completeRate*100).toFixed(0)}% 완주율, P95=${e2eP95.toFixed(0)}ms. ` +
-            `병목 구간은 Jaeger 분산 추적으로 식별합니다."`
+            `면접 포인트: "5단계 E2E 플로우를 k6로 자동화하여 ${(completeRate*100).toFixed(0)}% 완주율과 ` +
+            `P95=${e2eP95.toFixed(0)}ms를 달성했습니다. 병목 구간은 Jaeger 분산 추적으로 식별합니다."`
         );
     }
 
@@ -565,9 +540,6 @@ export function handleSummary(data) {
                 .map(([k, v]) => [k, v.thresholds])
         ),
         pass: overallPass,
-        note: 'E2E 완주 기준은 Step4(결제 요청)까지. Step5(PG 승인)는 외부 TossPayments API 의존으로 스테이징 환경에서 분리 측정.',
-        e2eCompleteCount: e2eCompleteCount,
-        pgConfirmSuccess: s5,
         diagnostics: diagnostics.map(d => ({
             symptom: d.symptom,
             causes: d.causes.map(c => ({ cause: c.text, check: c.check })),
@@ -640,28 +612,16 @@ Step 5: POST /payments/confirm      → 결제 승인 (PG 연동)
 </pre>
 </div>
 
-<h2>E2E 완주율 (내부 서비스 기준: Step4 결제 요청까지)</h2>
+<h2>E2E 완주율</h2>
 <table>
   <tr><th>항목</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
   <tr>
-    <td><strong>E2E 완주율 (Step1~4)</strong></td>
-    <td class="num"><strong>${(completeRate*100).toFixed(1)}%</strong> (${e2eCompleteCount}/${attempts}건)</td>
+    <td><strong>E2E 완주율</strong></td>
+    <td class="num"><strong>${(completeRate*100).toFixed(1)}%</strong> (${s5}/${attempts}건)</td>
     <td>&gt;50%</td>
     <td class="${passComplete ? 'pass' : 'fail'}">${passComplete ? 'PASS' : 'FAIL'}</td>
   </tr>
-  <tr>
-    <td>Step5 PG 승인 (Optional)</td>
-    <td class="num">${s5}/${e2eCompleteCount}건</td>
-    <td>외부 PG 의존</td>
-    <td style="color:#6b7280;">스테이징 미적용</td>
-  </tr>
 </table>
-<div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 16px; margin:8px 0; font-size:0.88rem; color:#92400e;">
-  <strong>외부 PG 의존성 격리:</strong> Step5(결제 승인)는 TossPayments 외부 API에 의존합니다.
-  스테이징 환경에 유효한 PG API Key가 없어 항상 401을 반환하므로,
-  내부 서비스 E2E 안정성은 Step4(결제 요청)까지를 기준으로 독립 측정합니다.
-  이를 통해 외부 장애가 내부 서비스 품질 판단을 왜곡하는 것을 방지합니다.
-</div>
 
 <h2>단계별 퍼널</h2>
 <table>
@@ -681,8 +641,13 @@ Step 5: POST /payments/confirm      → 결제 승인 (PG 연동)
 
 <h2>분석</h2>
 ${diagnostics.length > 0
-    ? diagnostics.map(d => '<div class="diag">\n  <h3>' + d.symptom + '</h3>\n  <ol>\n    ' + d.causes.map(c => '<li><span class="cause">' + c.text + '</span><span class="how">확인: ' + c.check + '</span></li>').join('\n    ') + '\n  </ol>\n</div>').join('\n')
-    : passNotes.map(n => '<div class="note">' + n + '</div>').join('\n')}
+    ? diagnostics.map(d => \`<div class="diag">
+  <h3>\${d.symptom}</h3>
+  <ol>
+    \${d.causes.map(c => \`<li><span class="cause">\${c.text}</span><span class="how">확인: \${c.check}</span></li>\`).join('\\n    ')}
+  </ol>
+</div>\`).join('\\n')
+    : passNotes.map(n => \`<div class="note">\${n}</div>\`).join('\\n')}
 
 <p class="meta">Generated by k6 scenario9-e2e-ticketing-flow.js | ${E2E_VUS} VUs x ${E2E_ITERATIONS} iters, eventId=${TARGET_EVENT_ID}</p>
 </body>
@@ -691,12 +656,11 @@ ${diagnostics.length > 0
     const consoleMsg = [
         `\n${'='.repeat(60)}`,
         `[scenario9-e2e-ticketing-flow] ${passText}`,
-        `  E2E 완주율 (Step4 기준): ${(completeRate*100).toFixed(1)}% (${e2eCompleteCount}/${attempts}건)`,
+        `  E2E 완주율: ${(completeRate*100).toFixed(1)}% (${s5}/${attempts}건)`,
         `  퍼널: join=${s1} → status=${s2} → reserve=${s3} → pay_req=${s4} → confirm=${s5}`,
         `  E2E P95=${e2eP95.toFixed(0)}ms`,
         `  단계별 P95: ${step1P95.toFixed(0)} → ${step2P95.toFixed(0)} → ${step3P95.toFixed(0)} → ${step4P95.toFixed(0)} → ${step5P95.toFixed(0)}ms`,
-        `  5xx (내부): ${srvErrCnt}건 (${(srvErrRate*100).toFixed(1)}%)`,
-        `  Step5 PG: ${s5}/${e2eCompleteCount}건 성공 (외부 PG 의존성 — 스테이징 미적용)`,
+        `  5xx: ${srvErrCnt}건 (${(srvErrRate*100).toFixed(1)}%)`,
         `  산출물: ${RESULT_DIR}/{html,json,csv}/scenario9-e2e-ticketing-flow_${RUN_TAG}.*`,
         `${'='.repeat(60)}\n`,
     ].join('\n');
