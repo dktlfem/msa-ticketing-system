@@ -14,13 +14,13 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.107.233.84'
         
-        SPRING_DATASOURCE_URL = 'jdbc:mysql://dev-db.cluuo6ag6qpg.ap-southeast-2.rds.amazonaws.com:3306/dev_db?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true'
-        SPRING_DATASOURCE_USERNAME = 'admin'
-        SPRING_DATASOURCE_PASSWORD = 'qkqhqhqkq1w2o(p)'
-
-        SPRING_DATA_REDIS_HOST = '192.168.124.101'
-        SPRING_DATA_REDIS_PORT = '6379'
-        REDIS_PASSWORD = 'qkqhqhqkq1w2R$$'
+        // ADR: 민감 정보는 Jenkins Credentials Store에서 주입 — 코드에 하드코딩 금지
+        SPRING_DATASOURCE_URL      = credentials('SPRING_DATASOURCE_URL')
+        SPRING_DATASOURCE_USERNAME = credentials('SPRING_DATASOURCE_USERNAME')
+        SPRING_DATASOURCE_PASSWORD = credentials('SPRING_DATASOURCE_PASSWORD')
+        SPRING_DATA_REDIS_HOST     = credentials('SPRING_DATA_REDIS_HOST')
+        SPRING_DATA_REDIS_PORT     = credentials('SPRING_DATA_REDIS_PORT')
+        REDIS_PASSWORD             = credentials('REDIS_PASSWORD')
     }
 
     options {

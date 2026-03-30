@@ -4,6 +4,7 @@ import com.koesc.ci_cd_test_app.domain.Reservation;
 import com.koesc.ci_cd_test_app.domain.ReservationStatus;
 import com.koesc.ci_cd_test_app.implement.manager.ReservationManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -96,7 +98,8 @@ public class ReservationService {
                 reservationManager.expireReservation(reservation.getReservationId());
                 processedCount++;
             } catch (RuntimeException e) {
-                // TODO: 나중에 log.warn(...) 또는 알림 시스템 연결
+                log.warn("[Reservation] 만료 처리 실패 — reservationId={}, reason={}",
+                        reservation.getReservationId(), e.getMessage(), e);
             }
         }
 

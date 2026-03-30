@@ -276,7 +276,7 @@ gateway:
 
     # ─── JWT Authentication ──────────────────────────────────────────
     # jwt-secret: 최소 32바이트(256bit). 운영 환경에서는 환경변수로 주입할 것.
-    jwt-secret: "change-me-in-production-must-be-at-least-32-bytes!!"
+    jwt-secret: "${JWT_SECRET_KEY:change-me-in-production-must-be-at-least-32-bytes!!}"
     excluded-paths:
       - /actuator/**
       - /fallback/**
