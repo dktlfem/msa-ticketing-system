@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG CircuitBreaker 검증 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #22c55e; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #1e40af; }
+</style>
+</head>
+<body>
+<h1>SCG CircuitBreaker 검증 결과 — 시나리오 2 <span class="badge">PASS</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-31T10:00:25.115Z | http://192.168.124.100:8090</p>
+
+<h2>목적</h2>
+<p>downstream(payment-app) 장애 시 CircuitBreaker가 CLOSED → OPEN 전이하여 fallback 503을 즉시 반환하고, 서비스 복구 후 HALF_OPEN → CLOSED로 자동 복구되는지 검증한다.</p>
+
+<h2>설정</h2>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>CircuitBreaker 이름</td><td>payment-service-cb</td></tr>
+  <tr><td>slidingWindowType</td><td>COUNT_BASED</td></tr>
+  <tr><td>slidingWindowSize</td><td>10</td></tr>
+  <tr><td>failureRateThreshold</td><td>50%</td></tr>
+  <tr><td>waitDurationInOpenState</td><td><strong>30s</strong> (payment 전용, 기본 10s)</td></tr>
+  <tr><td>permittedNumberOfCallsInHalfOpenState</td><td>3</td></tr>
+  <tr><td>fallbackUri</td><td>forward:/fallback/service-unavailable</td></tr>
+  <tr><td>statusCodes (CB 실패 인식)</td><td>500, 502, 503, 504</td></tr>
+  <tr><td>Retry</td><td>3회 (GET/HEAD, SERVER_ERROR, backoff 50ms→500ms)</td></tr>
+</table>
+
+<h2>Phase 구성</h2>
+<table>
+  <tr><th>Phase</th><th>VU</th><th>Duration</th><th>Sleep</th><th>목적</th></tr>
+  <tr><td>1. Baseline</td><td class="num">2</td><td>0~15s</td><td>500ms</td><td>CB CLOSED, payment-app 정상 — 기준선 확보</td></tr>
+  <tr><td>2. Fault</td><td class="num">3</td><td>15~75s</td><td>400ms</td><td>payment-app 중단 → CB OPEN 전이 + fallback 503 검증</td></tr>
+  <tr><td>3. Recovery</td><td class="num">2</td><td>75~105s</td><td>500ms</td><td>payment-app 재시작 → HALF_OPEN → CLOSED 자동 복구</td></tr>
+</table>
+
+<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin:16px 0; font-family:monospace; font-size:0.85rem; line-height:2;">
+  <div><strong>Timeline</strong></div>
+  <div>0s ──────── 15s ─────────────────────────────── 75s ──────────── 105s</div>
+  <div>│ Phase1&nbsp;&nbsp; │ Phase2 upstream 장애 → CB OPEN&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ Phase3 복구&nbsp;&nbsp; │</div>
+  <div>│ CLOSED&nbsp;&nbsp; │ 전이(13) + 순수FB(389) = 402&nbsp;│ HALF_OPEN?&nbsp;&nbsp;│</div>
+  <div style="margin-top:8px; line-height:1.8;">
+    🟡 upstream 에러: 미감지<br/>
+    🔴 CB OPEN (첫 fallback): 2026-03-31T09:58:57.185Z<br/>
+    ⏱️ 전이 시간: 미측정<br/>
+    🟢 복구: 미감지
+  </div>
+</div>
+
+<h2>결과</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>전체 요청</td><td class="num">575</td><td>-</td><td>-</td></tr>
+  <tr><td>CB CLOSED 정상 통과</td><td class="num">67</td><td>-</td><td>-</td></tr>
+  <tr><td>CB Fallback 합계</td><td class="num">402</td><td>&gt;0</td><td class="pass">PASS</td></tr>
+  <tr><td>&nbsp;&nbsp;├ 전이 fallback (Retry 포함)</td><td class="num">13</td><td>-</td><td>-</td></tr>
+  <tr><td>&nbsp;&nbsp;└ 순수 fallback (CB 이미 OPEN)</td><td class="num">389</td><td>-</td><td>-</td></tr>
+  <tr><td>HALF_OPEN → CLOSED 복구</td><td class="num">0</td><td>-</td><td><span style="color:#6b7280;">미감지</span></td></tr>
+  <tr><td>비정상 응답</td><td class="num">0</td><td>&lt;5</td><td class="pass">PASS</td></tr>
+  <tr><td>Fallback 비율 (fault 단계)</td><td class="num">70.2%</td><td>&gt;30%</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th><th>설명</th></tr>
+  <tr><td>CB CLOSED 통과</td><td class="num">0.0ms</td><td class="num">108.9ms</td><td class="num">0.0ms</td><td>정상 응답 (upstream 호출 포함)</td></tr>
+  <tr><td>Fallback 전체</td><td class="num">0.0ms</td><td class="num">96.8ms</td><td class="num">0.0ms</td><td>전이 + 순수 fallback 포함</td></tr>
+  <tr><td><strong>순수 Fallback</strong></td><td class="num">0.0ms</td><td class="num"><strong>38.2ms</strong></td><td class="num">0.0ms</td><td>CB 이미 OPEN, upstream 호출 없음 <strong>(핵심 지표)</strong></td></tr>
+</table>
+
+<div class="info">
+  <strong>SCG CB 동작 발견:</strong> Spring Cloud Gateway의 CircuitBreaker 필터는 upstream 실패 시 502를 클라이언트에 노출하지 않습니다.
+  같은 요청 안에서 CB가 에러를 감지하고 fallback으로 redirect합니다.<br/>
+  따라서 fallback 응답은 두 종류로 나뉩니다:<br/>
+  • <strong>전이 fallback</strong> (&gt;200ms): CB CLOSED → upstream 실패 + Retry 3회 → CB OPEN → fallback. Retry backoff(350ms) 포함<br/>
+  • <strong>순수 fallback</strong> (&lt;200ms): CB 이미 OPEN → upstream 호출 없이 즉시 503 반환. <strong>이 지표가 CB 성능의 핵심</strong>
+</div>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>cb_unexpected_count: count<5</td><td class="pass">PASS</td></tr><tr><td>cb_fallback_rate{phase:fault}: rate>0.30</td><td class="pass">PASS</td></tr><tr><td>cb_fallback_count: count>0</td><td class="pass">PASS</td></tr><tr><td>cb_fallback_rate{phase:baseline}: rate<0.01</td><td class="pass">PASS</td></tr><tr><td>cb_pure_fallback_duration: p(95)<150</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="diag">
+  <h3>Rate Limiter 429 응답 104건 — CB 동작과 무관한 Rate Limiter 정상 보호</h3>
+  <ol>
+    <li><span class="cause">payment-app 중단 시 upstream 처리 없이 빠르게 반환 → 순간 TPS 증가로 burst-capacity 초과</span><span class="how">확인: 현재: fault 3VU×400ms. 완전 배제 시 fault VU를 2로 줄이거나 sleep을 600ms로 조정</span></li>
+  </ol>
+</div>
+<div class="diag">
+  <h3>CB 복구 미감지 — HALF_OPEN → CLOSED 전이 미확인</h3>
+  <ol>
+    <li><span class="cause">payment-app 재시작이 늦어 recovery 단계(75~105s) 내에 HALF_OPEN 전이가 발생하지 않음</span><span class="how">확인: 75초 시점에 docker compose start payment-app을 실행했는지 확인. payment-app 기동 시간(~10s) 고려 필요</span></li>
+    <li><span class="cause">CB OPEN → HALF_OPEN 전이가 recovery 단계 이후에 발생 (waitDuration=30s)</span><span class="how">확인: CB가 마지막으로 OPEN된 시점 + 30초가 105초(테스트 종료) 이전인지 확인</span></li>
+    <li><span class="cause">payment-app 기동 후 health check가 통과하지 않아 HALF_OPEN 요청이 실패 → 다시 OPEN</span><span class="how">확인: payment-app actuator/health 응답 확인. 기동 완료까지 약간의 시간 필요</span></li>
+  </ol>
+</div>
+
+<p class="meta">Generated by k6 scenario2-circuit-breaker.js</p>
+</body>
+</html>

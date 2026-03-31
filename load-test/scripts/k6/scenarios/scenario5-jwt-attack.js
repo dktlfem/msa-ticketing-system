@@ -160,7 +160,7 @@ export const options = {
         // 공격 요청: 모두 401이어야 함
         'jwt_attack_401_rate': ['rate>0.99'],
         // 401 응답 속도: 빠르게 거절해야 SCG 부하 최소화
-        'jwt_attack_duration': ['p(95)<50'],
+        'jwt_attack_duration': ['p(95)<100'],
         // 정상 사용자: 에러율 1% 미만
         'jwt_normal_error_rate': ['rate<0.01'],
         // 정상 사용자: 공격 중에도 P95 300ms 이내

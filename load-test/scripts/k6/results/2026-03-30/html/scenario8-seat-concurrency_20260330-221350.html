@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>좌석 예매 동시성 테스트 (분산락 검증) 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .critical { background: #fef2f2; color: #dc2626; font-weight: 700; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .arch { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 12px 0; }
+  .arch pre { margin: 0; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>좌석 예매 동시성 테스트 — 시나리오 8 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-30T13:13:50.526Z | http://192.168.124.100:8090 | seatId=1, 50 VUs</p>
+
+<h2>3-Layer 동시성 제어 아키텍처</h2>
+<div class="arch">
+<pre>
+Layer 1: Redisson 분산락 (reservation:lock:seat:{seatId})
+         Wait=5s, Lease=15s → 좌석 단위 직렬화
+
+Layer 2: JPA 낙관적 락 (@Version, SeatEntity)
+         → DB 수준 충돌 감지 (2차 방어)
+
+Layer 3: Pessimistic Lock (payment-app)
+         → 최종 결제 확정 시 SELECT FOR UPDATE
+</pre>
+</div>
+
+<h2>경합 결과 (동일 좌석 seatId=1)</h2>
+<table>
+  <tr><th>응답 코드</th><th>의미</th><th class="num">건수</th><th>비율</th><th>판정</th></tr>
+  <tr class="">
+    <td><strong>201 Created</strong></td><td>예매 성공</td>
+    <td class="num"><strong>0</strong></td>
+    <td class="num">0.0%</td>
+    <td class="fail">FAIL (>=1)</td>
+  </tr>
+  <tr>
+    <td>409 Conflict</td><td>이미 선점됨 (정상 거절)</td>
+    <td class="num">0</td>
+    <td class="num">0.0%</td>
+    <td style="color:#6b7280;">정상</td>
+  </tr>
+  <tr>
+    <td>423 Locked</td><td>분산락 대기 실패 (5s timeout)</td>
+    <td class="num">0</td>
+    <td class="num">0.0%</td>
+    <td style="color:#6b7280;">정상</td>
+  </tr>
+  <tr>
+    <td>429 Rate Limit</td><td>SCG 요청 제한</td>
+    <td class="num">0</td>
+    <td class="num">0.0%</td>
+    <td style="color:#6b7280;">정상</td>
+  </tr>
+  <tr>
+    <td>5xx Error</td><td>서버 장애</td>
+    <td class="num">50</td>
+    <td class="num">100.0%</td>
+    <td class="fail">FAIL (<5%)</td>
+  </tr>
+</table>
+
+<h2>중복 예매 검증 (핵심)</h2>
+<table>
+  <tr><th>항목</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr class="">
+    <td><strong>중복 예매 건수</strong></td>
+    <td class="num"><strong>0</strong></td>
+    <td>0건</td>
+    <td class="pass"><strong>PASS</strong></td>
+  </tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th><th class="num">Max</th><th>목표</th><th>판정</th></tr>
+  <tr>
+    <td>경합 전체</td>
+    <td class="num">0.0ms</td>
+    <td class="num"><strong>120.7ms</strong></td>
+    <td class="num">0.0ms</td>
+    <td class="num">126.3ms</td>
+    <td>-</td><td>-</td>
+  </tr>
+  <tr>
+    <td>성공 요청</td>
+    <td class="num">0.0ms</td>
+    <td class="num"><strong>0.0ms</strong></td>
+    <td class="num">-</td><td class="num">-</td>
+    <td>&lt;1000ms</td>
+    <td class="pass">PASS</td>
+  </tr>
+  <tr>
+    <td>락 실패 (409/423)</td>
+    <td class="num">0.0ms</td>
+    <td class="num"><strong>0.0ms</strong></td>
+    <td class="num">-</td><td class="num">-</td>
+    <td>&lt;5500ms</td>
+    <td class="pass">PASS</td>
+  </tr>
+</table>
+
+<h2>분석</h2>
+<div class="diag">
+  <h3>경합 구간에서 예매 성공 0건</h3>
+  <ol>
+    <li><span class="cause">Queue-Token 검증 실패 (waitingroom-app에서 토큰 유효성 검증)</span><span class="how">확인: booking-app 로그에서 "Invalid token" 에러 확인. 테스트 토큰이 실제 대기열 토큰과 다를 수 있음</span></li>
+    <li><span class="cause">Auth-Passport 헤더 파싱 실패</span><span class="how">확인: booking-app 로그에서 "Auth-Passport" 관련 에러 확인</span></li>
+    <li><span class="cause">대상 좌석(seatId=1)이 이미 SOLD/HOLD 상태</span><span class="how">확인: concert-app DB에서 SELECT status FROM seat WHERE id=1 확인</span></li>
+  </ol>
+</div>
+<div class="diag">
+  <h3>5xx 에러 50건 — 전체의 100.0%</h3>
+  <ol>
+    <li><span class="cause">Redisson 연결 풀 고갈 (poolSize=10)</span><span class="how">확인: booking-app 로그에서 RedisConnectionException 확인. docker stats로 Redis 메모리 확인</span></li>
+    <li><span class="cause">동시 요청으로 HikariCP 풀 고갈</span><span class="how">확인: booking-app 로그에서 "Connection is not available" 확인. HikariCP maximumPoolSize 조정 검토</span></li>
+    <li><span class="cause">concert-app 내부 서비스 호출 타임아웃</span><span class="how">확인: booking-app → concert-app HTTP 호출 타임아웃 로그 확인</span></li>
+  </ol>
+</div>
+
+<h2>DB 최종 검증 (테스트 후 수동 확인)</h2>
+<div class="arch">
+<pre>
+-- 동일 좌석 중복 예매 확인
+SELECT seat_id, COUNT(*) as cnt
+FROM reservation
+WHERE seat_id = 1
+  AND status IN ('PENDING', 'CONFIRMED')
+GROUP BY seat_id
+HAVING cnt > 1;
+
+-- 결과가 0건이면 동시성 제어 완벽
+</pre>
+</div>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>sc_reservation_success: count>=1</td><td class="fail">FAIL</td></tr><tr><td>sc_lock_fail_duration: p(95)<5500</td><td class="pass">PASS</td></tr><tr><td>sc_success_duration: p(95)<1000</td><td class="pass">PASS</td></tr><tr><td>sc_duplicate_booking: count==0</td><td class="pass">PASS</td></tr><tr><td>sc_contention_error_rate: rate<0.05</td><td class="fail">FAIL</td></tr>
+</table>
+
+<p class="meta">Generated by k6 scenario8-seat-concurrency.js | seatId=1, 50 VUs, Redisson Lock (5s/15s)</p>
+</body>
+</html>

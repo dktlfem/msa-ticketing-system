@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG Rate Limiter 검증 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #22c55e; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #1e40af; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
+  .card-val { font-size: 2rem; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>SCG Rate Limiter 검증 결과 — 시나리오 1 <span class="badge">PASS</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-31T04:48:58.068Z | http://192.168.124.100:8090</p>
+
+<h2>목적</h2>
+<p>payment-service route에 설정된 LocalRateLimiter(burst-capacity=10/s per IP)가 실제로 초과 트래픽을 429로 차단하는지 검증한다. 저트래픽(baseline) → 초과트래픽(burst) → 트래픽 감소(recovery) 3단계로 rate limiter의 차단/복구 동작을 확인한다.</p>
+
+<div class="grid">
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">429 차단율 (Burst 구간)</div>
+    <div class="card-val" style="color:#16a34a">86.4%</div>
+    <div style="font-size:0.8rem;">7034건 중 6073건 차단</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.85rem;">Recovery 단계 복구</div>
+    <div class="card-val" style="color:#16a34a">PASS</div>
+    <div style="font-size:0.8rem;">트래픽 감소 후 정상 복구</div>
+  </div>
+</div>
+
+<h2>설정</h2>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>rate-limiter</td><td>LocalRateLimiter (인메모리, 1초 고정 윈도)</td></tr>
+  <tr><td>burst-capacity</td><td>10 req/s (per IP)</td></tr>
+  <tr><td>key-resolver</td><td>remoteAddrKeyResolver (클라이언트 IP)</td></tr>
+  <tr><td>target</td><td>GET /api/v1/payments/1 (payment-service route)</td></tr>
+</table>
+
+<h2>Phase 구성</h2>
+<table>
+  <tr><th>Phase</th><th>VU</th><th>Duration</th><th>Sleep</th><th>목적</th></tr>
+  <tr><td>1. Baseline</td><td class="num">1</td><td>15s</td><td>500ms</td><td>burst-capacity 미만, 429 = 0% 확인</td></tr>
+  <tr><td>2. Burst</td><td class="num">15</td><td>30s</td><td>50ms</td><td>burst-capacity 초과, 429 &gt; 50% 확인</td></tr>
+  <tr><td>3. Recovery</td><td class="num">1</td><td>10s</td><td>500ms</td><td>윈도 리셋 후 복구 확인</td></tr>
+</table>
+
+<h2>결과</h2>
+<table>
+  <tr><th>지표</th><th class="num">값</th><th>목표</th><th>판정</th></tr>
+  <tr><td>전체 요청</td><td class="num">7034</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 통과</td><td class="num">960</td><td>-</td><td>-</td></tr>
+  <tr><td>Rate Limiter 차단 (429)</td><td class="num">6073</td><td>-</td><td>-</td></tr>
+  <tr><td>비정상 응답</td><td class="num">0</td><td>&lt;5</td><td class="pass">PASS</td></tr>
+  <tr><td>429 차단율</td><td class="num">86.4%</td><td>&gt;50%</td><td class="pass">PASS</td></tr>
+  <tr><td>평균 허용 TPS</td><td class="num">17.45 r/s</td><td>~10 r/s</td><td>-</td></tr>
+</table>
+
+<h2>레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th></tr>
+  <tr><td>429 차단 응답</td><td class="num">0.0ms</td><td class="num">20.4ms</td><td class="num">0.0ms</td></tr>
+  <tr><td>통과 응답</td><td class="num">0.0ms</td><td class="num">23.5ms</td><td class="num">0.0ms</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>rate_limited_rate{phase:baseline}: rate<0.01</td><td class="pass">PASS</td></tr><tr><td>blocked_duration: p(95)<50</td><td class="pass">PASS</td></tr><tr><td>rate_limited_rate{phase:recovery}: rate<0.10</td><td class="pass">PASS</td></tr><tr><td>unexpected_count: count<5</td><td class="pass">PASS</td></tr><tr><td>rate_limited_rate{phase:burst}: rate>0.50</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>분석 및 원인</h2>
+<div class="note">허용 TPS가 burst-capacity(10)보다 약간 높은 것은 1초 고정 윈도 경계 효과로 정상입니다.</div>
+<div class="note">LocalRateLimiter는 인메모리 단일 노드 방식입니다. SCG를 수평 확장하면 노드별로 독립 카운터가 동작하므로 실제 허용 TPS = burst-capacity × 노드 수 가 됩니다. 운영 환경에서는 RedisRateLimiter로 전환이 필요합니다.</div>
+
+<div class="info">
+  <strong>설계 포인트 — LocalRateLimiter(burst-capacity=10/s per IP):</strong><br/>
+  remoteAddrKeyResolver로 클라이언트 IP별로 카운터를 관리합니다. Redis가 아닌 인메모리 방식이라 외부 의존성 없이 빠르게 동작하지만,
+  다중 인스턴스 배포 시 인스턴스 간 카운터를 공유하지 않습니다. 단일 노드 환경이나 sticky session 라우팅이 보장될 때 적합합니다.
+</div>
+
+<p class="meta">Generated by k6 scenario1-rate-limiter.js</p>
+</body>
+</html>

@@ -5,7 +5,7 @@ set -euo pipefail
 SCG_BASE_URL="${SCG_BASE_URL:-http://192.168.124.100:8090}"
 DIRECT_BASE_URL="${DIRECT_BASE_URL:-http://192.168.124.100:8082}"
 INFLUXDB_URL="${INFLUXDB_URL:-http://192.168.124.100:8086/k6}"
-STAGING_SSH="${STAGING_SSH:-dktlfem@192.168.124.100}"
+STAGING_SSH="${STAGING_SSH:-dktlfem_home}"
 RUN_DATE="$(date +%Y-%m-%d)"
 RESULT_DIR="${RESULT_DIR:-results/${RUN_DATE}}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -195,6 +195,28 @@ run_s7() {
   run_scenario "scenario7-internal-block.js" "scenario7-internal-block" "$1" "$2"
 }
 
+run_s8() {
+  local contention_vus="${CONTENTION_VUS:-50}"
+  log_info "scenario8: 분산락 동시성 검증 (CONTENTION_VUS=${contention_vus})"
+  run_scenario "scenario8-seat-concurrency.js" "scenario8-seat-concurrency" "$1" "$2" \
+    "CONTENTION_VUS=${contention_vus}"
+}
+
+run_s9() {
+  log_info "scenario9: E2E 티켓팅 플로우 (대기열→예매→결제)"
+  run_scenario "scenario9-e2e-ticketing-flow.js" "scenario9-e2e-ticketing-flow" "$1" "$2"
+}
+
+run_s10() {
+  log_info "scenario10: 결제 멱등성 키 중복 방지 검증"
+  run_scenario "scenario10-payment-idempotency.js" "scenario10-payment-idempotency" "$1" "$2"
+}
+
+run_s11() {
+  log_info "scenario11: Saga 보상 트랜잭션 및 복구 스케줄러 검증"
+  run_scenario "scenario11-saga-compensation.js" "scenario11-saga-compensation" "$1" "$2"
+}
+
 # ── 메인 ────────────────────────────────────────────────────
 
 echo ""
@@ -275,10 +297,19 @@ case "${MODE}" in
     run_and_track run_s6 7 $TOTAL
     ;;
 
-  [1-7])
+  [1-9]|10|11)
     log_info "단일 시나리오 실행: scenario${MODE}"
     TOTAL=1
     run_and_track "run_s${MODE}" 1 $TOTAL
+    ;;
+
+  domain)
+    log_info "핵심 도메인 시나리오 실행: 8 → 9 → 10 → 11"
+    TOTAL=4
+    run_and_track run_s8  1 $TOTAL
+    run_and_track run_s9  2 $TOTAL
+    run_and_track run_s10 3 $TOTAL
+    run_and_track run_s11 4 $TOTAL
     ;;
 
   *)
