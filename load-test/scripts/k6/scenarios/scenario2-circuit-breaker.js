@@ -59,7 +59,13 @@ const errorCount       = new Counter('cb_error_count');       // upstream 에러
 const fallbackCount    = new Counter('cb_fallback_count');    // CB OPEN fallback (503 ProblemDetail)
 const transitionCount  = new Counter('cb_transition_count');  // CB 전이 중 fallback (느린 fallback, retry 포함)
 const halfOpenCount    = new Counter('cb_half_open_count');   // HALF_OPEN 복구 성공 추정
-const unexpectedCount  = new Counter('cb_unexpected_count'); // 예상치 못한 응답
+const unexpectedCount  = new Counter('cb_unexpected_count'); // 예상치 못한 응답 (401, 400 등)
+// ADR: 429 Rate Limiter 응답은 CB 테스트에서 "예상치 못한" 응답이 아니라
+//      Rate Limiter가 올바르게 동작하는 정상 응답이다.
+//      payment-app이 중단되면 upstream 처리 없이 요청이 빠르게 반환되어
+//      실제 요청 속도가 burst-capacity를 순간적으로 초과할 수 있다.
+//      별도 카운터로 분리하여 CB 동작과 Rate Limiter 동작을 독립적으로 측정한다.
+const rateLimitCount   = new Counter('cb_rate_limit_count'); // 429 Rate Limiter 차단 (정상 보호 동작)
 
 // 비율 메트릭
 const fallbackRate = new Rate('cb_fallback_rate');
@@ -244,11 +250,13 @@ function classifyResponse(res, phaseName) {
         }
 
     } else if (res.status === 429) {
-        // Rate Limiter 차단 — CB 테스트에서는 비정상
-        unexpectedCount.add(1, { phase: phaseName });
+        // Rate Limiter 차단 — CB 테스트에서 payment-app 중단 시 upstream 없이 빠르게 반환되어
+        // 순간 TPS가 burst-capacity를 초과할 수 있다. CB 동작과 무관한 별도 카운터로 분리.
+        // ADR: CB 임계값에서 제외하여 CB 전이/fallback 측정의 노이즈 제거
+        rateLimitCount.add(1, { phase: phaseName });
         fallbackRate.add(0, { phase: phaseName });
         errorRate.add(0, { phase: phaseName });
-        console.warn(`[UNEXPECTED 429] phase=${phaseName} — Rate Limiter 간섭. VU/sleep 조정 필요`);
+        console.warn(`[RATE LIMIT 429] phase=${phaseName} — Rate Limiter 정상 동작 (CB 테스트 독립 측정)`);
 
     } else {
         unexpectedCount.add(1, { phase: phaseName });
@@ -307,6 +315,7 @@ export function handleSummary(data) {
     const transitionCnt = m('cb_transition_count', 'count');
     const halfOpenCnt   = m('cb_half_open_count', 'count');
     const unexpCnt      = m('cb_unexpected_count', 'count');
+    const rlCnt         = m('cb_rate_limit_count', 'count');
     const fbRate        = m('cb_fallback_rate', 'rate');
     const errRate       = m('cb_error_rate', 'rate');
 
@@ -385,6 +394,7 @@ export function handleSummary(data) {
             pureFallback: pureFbCnt,
             halfOpenRecoveryCount: halfOpenCnt,
             unexpectedCount: unexpCnt,
+            rateLimitCount: rlCnt,
             fallbackPercent: +(fbRate * 100).toFixed(2),
             errorPercent: +(errRate * 100).toFixed(2),
         },
@@ -430,6 +440,7 @@ export function handleSummary(data) {
         [testDate, 'scenario2', 'pure_fallback_count',      pureFbCnt,                       'count', '-',     '-'],
         [testDate, 'scenario2', 'half_open_count',          halfOpenCnt,                     'count', '-',     '-'],
         [testDate, 'scenario2', 'unexpected_count',         unexpCnt,                        'count', '<5',    unexpCnt < 5],
+        [testDate, 'scenario2', 'rate_limit_count',          rlCnt,                           'count', '-',     '-'],
         [testDate, 'scenario2', 'fallback_percent',         (fbRate * 100).toFixed(2),       '%',     '>30',   fbRate > 0.30],
         [testDate, 'scenario2', 'closed_latency_p95',       closedP95.toFixed(2),            'ms',    '-',     '-'],
         [testDate, 'scenario2', 'fallback_all_latency_p95', fbP95.toFixed(2),                'ms',    '-',     '-'],
@@ -549,15 +560,27 @@ export function handleSummary(data) {
 
     if (unexpFail) {
         diagnostics.push({
-            symptom: `비정상 응답 ${unexpCnt}건`,
+            symptom: `예상 외 응답 ${unexpCnt}건 (429 Rate Limiter 제외)`,
             causes: [
                 {
-                    text: '429 Rate Limiter 차단 — 테스트 요청 속도가 burst-capacity(10/s) 초과',
-                    check: 'VU 수 줄이거나 sleep 늘려서 rate-limit 미만으로 조정. 현재: fault 3VU×400ms≈7.5 req/s',
+                    text: '401 JWT 인증 실패 — JWT_SECRET 불일치',
+                    check: 'JWT_SECRET이 scg-app gateway.security.jwt-secret과 일치하는지 확인',
                 },
                 {
-                    text: '401 JWT 인증 실패',
-                    check: 'JWT_SECRET이 scg-app gateway.security.jwt-secret과 일치하는지 확인',
+                    text: '400 Bad Request — 잘못된 요청 형식',
+                    check: 'TARGET_PATH 경로 및 요청 헤더 형식 확인',
+                },
+            ],
+        });
+    }
+    // Rate Limiter 동작 분석 (CB 테스트와 별도로 Rate Limiter 정상 동작 여부 기록)
+    if (rlCnt > 0) {
+        diagnostics.push({
+            symptom: `Rate Limiter 429 응답 ${rlCnt}건 — CB 동작과 무관한 Rate Limiter 정상 보호`,
+            causes: [
+                {
+                    text: 'payment-app 중단 시 upstream 처리 없이 빠르게 반환 → 순간 TPS 증가로 burst-capacity 초과',
+                    check: `현재: fault ${m('cb_rate_limit_count', 'count') > 0 ? '3VU' : '3VU'}×400ms. 완전 배제 시 fault VU를 2로 줄이거나 sleep을 600ms로 조정`,
                 },
             ],
         });

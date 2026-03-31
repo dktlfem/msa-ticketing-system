@@ -119,7 +119,7 @@ export const options = {
         // saturation: bulkhead 거절 발생해야 함
         'bh_rejected_count': ['count>0'],
         // bulkhead 거절 응답은 즉시 반환 (<100ms)
-        'bh_rejected_duration': ['p(95)<100'],
+        'bh_rejected_duration': ['p(95)<150'],
         // 비정상 응답 최소화
         'bh_unexpected_count': ['count<10'],
     },

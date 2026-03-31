@@ -270,7 +270,12 @@ def create_excel(results, result_dir):
             r += 1
             for key, val in results_data.items():
                 ws_detail.cell(row=r, column=1, value=key).border = thin_border
-                style_data_cell(ws_detail, r, 2, True).value = val
+                # dict/list 등 복합 타입은 JSON 문자열로 변환
+                if isinstance(val, (dict, list)):
+                    cell_val = json.dumps(val, ensure_ascii=False)
+                else:
+                    cell_val = val
+                style_data_cell(ws_detail, r, 2, True).value = cell_val
                 r += 1
 
         # 레이턴시

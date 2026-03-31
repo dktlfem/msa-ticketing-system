@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG E2E 혼합 부하 Soak Test 결과</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; } .fail { color: #dc2626; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 8px 0 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 10px; line-height: 1.5; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; margin-top: 2px; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .warn { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; color: #92400e; }
+</style>
+</head>
+<body>
+<h1>SCG E2E 혼합 부하 Soak Test — 시나리오 6 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280; font-size:0.85rem;">2026-03-31T05:00:59.054Z | http://192.168.124.100:8090 | 10m, 20 VUs, ~20 req/s</p>
+
+<h2>목적</h2>
+<p>실제 사용 패턴에 가까운 혼합 트래픽으로 10m 동안 SCG와 각 마이크로서비스의 안정성을 확인한다.
+메모리 누수, GC 압력, 레이턴시 점진 증가를 탐지한다.</p>
+
+<div class="warn">
+  ⚠️ <strong>GC 압력 / 메모리 누수 감지는 Grafana 필수:</strong>
+  k6는 JVM 내부 메트릭(jvm.memory.used, jvm.gc.pause)을 직접 수집할 수 없습니다.
+  Grafana에서 soak 시작 시점과 종료 시점의 jvm.memory.used 비교 및 jvm.gc.pause 급증 여부를 함께 확인하세요.
+</div>
+
+<h2>트래픽 비율</h2>
+<table>
+  <tr><th>서비스</th><th>비율</th><th>요청 수</th><th>Rate Limit</th></tr>
+  <tr><td>waiting-room (status)</td><td>60%</td><td class="num">7022</td><td>replenishRate=100/s</td></tr>
+  <tr><td>concert (GET events/1)</td><td>25%</td><td class="num">2931</td><td>replenishRate=30/s</td></tr>
+  <tr><td>payment (GET payments/1)</td><td>10%</td><td class="num">1201</td><td>replenishRate=5/s</td></tr>
+  <tr><td>bad request (expired JWT / 404)</td><td>5%</td><td class="num">589</td><td>401 즉시 거절 (rate-limiter 미도달)</td></tr>
+</table>
+
+<h2>전체 레이턴시</h2>
+<table>
+  <tr><th>구분</th><th class="num">P50</th><th class="num">P95</th><th class="num">P99</th><th class="num">Max</th><th>목표</th><th>판정</th></tr>
+  <tr><td><strong>전체</strong></td><td class="num">0.0ms</td><td class="num"><strong>43.7ms</strong></td><td class="num">0.0ms</td><td class="num">476.5ms</td><td>&lt;200ms</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>서비스별 레이턴시 P95</h2>
+<table>
+  <tr><th>서비스</th><th class="num">P95</th><th>목표</th><th>판정</th></tr>
+  <tr><td>waiting-room</td><td class="num">29.7ms</td><td>&lt;300ms</td><td class="pass">PASS</td></tr>
+  <tr><td>concert</td><td class="num">366.7ms</td><td>&lt;300ms</td><td class="fail">FAIL</td></tr>
+  <tr><td>payment</td><td class="num">27.2ms</td><td>&lt;500ms</td><td class="pass">PASS</td></tr>
+</table>
+
+<h2>에러 분류</h2>
+<table>
+  <tr><th>종류</th><th class="num">건수</th><th>설명</th><th>판정</th></tr>
+  <tr><td>5xx 서비스 에러</td><td class="num">2931</td><td>CB fallback, 서버 오류</td><td class="fail">FAIL</td></tr>
+  <tr><td>429 Rate Limit</td><td class="num">0</td><td>예상된 동작 (에러율 제외)</td><td style="color:#6b7280;">정상</td></tr>
+  <tr><td>비정상 응답</td><td class="num">0</td><td>401/기타</td><td class="pass">PASS</td></tr>
+  <tr><td><strong>전체 에러율</strong></td><td class="num"><strong>26.28%</strong></td><td>&lt;1% (429 제외)</td><td class="fail">FAIL</td></tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>soak_error_rate: rate<0.01</td><td class="fail">FAIL</td></tr><tr><td>soak_unexpected_count: count<50</td><td class="pass">PASS</td></tr><tr><td>soak_overall_duration: p(95)<200</td><td class="pass">PASS</td></tr><tr><td>soak_waitingroom_duration: p(95)<300</td><td class="pass">PASS</td></tr><tr><td>soak_payment_duration: p(95)<500</td><td class="pass">PASS</td></tr><tr><td>soak_concert_duration: p(95)<300</td><td class="fail">FAIL</td></tr>
+</table>
+
+<h2>분석</h2>
+<div class="diag">
+  <h3>에러율 26.28% — 목표(1%) 초과</h3>
+  <ol>
+    <li><span class="cause">CB OPEN으로 503 fallback 발생</span><span class="how">확인: GET /actuator/health 각 서비스 CB 상태 확인</span></li>
+    <li><span class="cause">payment 또는 concert rate-limit(429)이 에러율 계산에 포함됨</span><span class="how">확인: rateLimitCount=0건. 429는 예상 동작이므로 에러율에서 제외됨. 5xx serviceErrorCount=2931건 확인</span></li>
+    <li><span class="cause">soak 후반부 메모리 부족으로 서비스 OOM 발생</span><span class="how">확인: Grafana → jvm.memory.used max 확인. docker stats로 컨테이너 메모리 확인</span></li>
+  </ol>
+</div>
+
+<p class="meta">Generated by k6 scenario6-soak.js | 10m, 20 VUs, mix=60/25/10/5%</p>
+</body>
+</html>
