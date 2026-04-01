@@ -36,12 +36,6 @@ import java.util.List;
  * [역할(Role) 설계]
  * - 현재는 모든 사용자에게 ROLE_USER를 부여 (MVP 수준)
  * - 향후 UserEntity에 roles 컬럼 추가 시 동적 역할 부여로 확장 가능
- *
- * [면접 포인트]
- * Q. "Token Rotation을 적용한 이유는?"
- * A. Refresh Token 탈취 시 피해를 최소화하기 위함.
- *    갱신 시마다 Refresh Token을 새로 발급하고, Redis에 최신 토큰만 유지하므로
- *    탈취된 구 토큰으로 갱신 시도 시 불일치로 거부된다.
  */
 @Slf4j
 @Service
@@ -119,13 +113,6 @@ public class AuthService {
      * Redis에서 해당 유저의 Refresh Token을 삭제하여 즉시 무효화한다.
      * Access Token은 stateless이므로 서버에서 강제 만료할 수 없지만,
      * 짧은 수명(30분)으로 자연 만료되며, Refresh Token이 삭제되어 갱신이 불가하다.
-     *
-     * [면접 포인트]
-     * Q. "Access Token은 로그아웃 후에도 유효한데 어떻게 처리하나요?"
-     * A. Access Token은 짧은 수명(30분)으로 자연 만료에 의존하고,
-     *    Refresh Token을 Redis에서 삭제하여 토큰 갱신을 차단한다.
-     *    즉시 차단이 필요한 경우 Token Blacklist(Redis Set) 도입을 고려할 수 있으나,
-     *    매 요청마다 Blacklist 조회 비용이 발생하므로 트레이드오프가 있다.
      */
     public void logout(Long userId) {
         refreshTokenStore.delete(userId);

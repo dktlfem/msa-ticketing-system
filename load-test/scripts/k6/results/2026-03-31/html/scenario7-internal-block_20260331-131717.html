@@ -101,7 +101,6 @@
   <strong>설계 포인트 — InternalPathBlockFilter(order=HIGHEST_PRECEDENCE+2):</strong><br/>
   JwtAuthenticationFilter(+4), RequestRateLimiter보다 먼저 실행되어, /internal/** 요청은 JWT 검증 없이 즉시 403을 반환합니다.
   Redis 호출도 발생하지 않아 공격 트래픽이 downstream 서비스나 Redis에 부하를 주지 않습니다.
-  면접 포인트: "제로-트러스트 구조에서 내부 API는 SCG를 통한 외부 호출 자체를 차단하고, 서비스 간 통신은 K8s 네트워크 정책으로 제한합니다."
 </div>
 
 <h2>검증 대상 경로</h2>

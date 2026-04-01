@@ -368,7 +368,7 @@ export function handleSummary(data) {
             `영향 없음을 확인했습니다.`
         );
         passNotes.push(
-            `면접 포인트: "JWT 검증(GlobalFilter order=HIGHEST_PRECEDENCE+4)은 rate-limiter route filter보다 먼저 실행되므로, ` +
+            `포인트: "JWT 검증(GlobalFilter order=HIGHEST_PRECEDENCE+4)은 rate-limiter route filter보다 먼저 실행되므로, ` +
             `잘못된 JWT 요청은 Redis round-trip 없이 즉시 거절됩니다. 100 req/s 공격에서도 ` +
             `정상 사용자 응답 시간에 영향이 없었습니다."`
         );

@@ -51,7 +51,7 @@ docs/_reports/
 load-test/scripts/k6/results/**/csv/
 load-test/scripts/k6/results/**/json/
 load-test/scripts/k6/results/**/*.xlsx
-# HTML 시나리오 리포트 + 분석 .md는 git 추적 (포트폴리오/면접 어필)
+# HTML 시나리오 리포트 + 분석 .md는 git 추적
 !load-test/scripts/k6/results/**/html/
 !load-test/scripts/k6/results/**/html/*.html
 !load-test/scripts/k6/results/**/analysis-report_*.md

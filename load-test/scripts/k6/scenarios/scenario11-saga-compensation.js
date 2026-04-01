@@ -31,12 +31,6 @@
 //   - 5xx 에러율 < 10%
 //   - 결제 상태 불일치 0건 (APPROVED인데 booking이 실패한 경우)
 //
-// 면접 핵심 포인트:
-//   Q. "PG 결제 후 예약 확인이 실패하면 어떻게 되나요?"
-//   A. "Saga 패턴으로 자동 환불합니다. PG 취소까지 실패하면 CANCEL_FAILED 상태로 전환하고,
-//       CancelFailedRetryScheduler가 5분마다 재시도하여 Eventually Consistent 복구합니다.
-//       k6 부하 테스트로 30 VU 동시 요청 환경에서도 보상 트랜잭션이 정상 동작함을 증명했습니다."
-//
 // 실행:
 //   k6 run \
 //     --env SCG_BASE_URL=http://192.168.124.100:8090 \
@@ -349,7 +343,7 @@ export function handleSummary(data) {
             );
         }
         passNotes.push(
-            `면접 포인트: "30 VU 동시 결제 환경에서 Saga 보상 트랜잭션이 정상 동작했습니다. ` +
+            `포인트: "30 VU 동시 결제 환경에서 Saga 보상 트랜잭션이 정상 동작했습니다. ` +
             `PG 취소 실패 시에도 CANCEL_FAILED 자동 복구 스케줄러로 데이터 정합성을 보장합니다."`
         );
     }
