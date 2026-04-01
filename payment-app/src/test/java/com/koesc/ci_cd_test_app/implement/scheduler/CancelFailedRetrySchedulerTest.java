@@ -25,11 +25,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * CancelFailedRetryScheduler 단위 테스트.
- *
- * [면접 포인트]
- * 이 스케줄러는 Saga 패턴의 "최종 안전망"이다.
- * 보상 트랜잭션(PG 취소)이 실패해도 스케줄러가 주기적으로 재시도하여
- * Eventually Consistent 상태를 달성한다.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CancelFailedRetryScheduler 단위 테스트")

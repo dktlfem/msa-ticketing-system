@@ -679,7 +679,7 @@ ${timelineHtml}
   <strong>Phase A — Bulkhead 활성 보호 (~12s):</strong> CB가 아직 CLOSED인 구간. connect timeout(3s) × retry(4회)로 각 요청이 ~12초간 bulkhead 슬롯을 점유한다.
   10개 슬롯이 모두 점유되면 초과 요청은 즉시 503으로 거절된다. 이 구간이 없으면 SCG의 Netty 워커 스레드가 무제한으로 downstream connect timeout에 묶여 다른 라우트(user-service, concert-service 등)까지 영향받는다.<br/><br/>
   <strong>Phase B — CB 보호 인계 (~12s+):</strong> CB slidingWindow에 실패가 누적되어 CB OPEN 전이. 이후 요청은 upstream 호출 없이 즉시 CB fallback(503)을 반환하므로 bulkhead 슬롯이 즉시 해제된다. Bulkhead 거절은 자연스럽게 감소한다.<br/><br/>
-  <em>면접 포인트:</em> "Bulkhead는 CB가 학습하기 전 초기 12초를 보호하는 1차 방어선이고, CB는 학습 후 빠르게 차단하는 2차 방어선입니다."
+  <em>포인트:</em> "Bulkhead는 CB가 학습하기 전 초기 12초를 보호하는 1차 방어선이고, CB는 학습 후 빠르게 차단하는 2차 방어선입니다."
 </div>
 
 <h2>Threshold 판정</h2>
