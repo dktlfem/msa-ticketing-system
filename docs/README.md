@@ -116,24 +116,6 @@ author: "민석"
 
 ---
 
-## _reports/ 폴더
-
-변경 이력 및 작업 로그는 `_reports/` 폴더에 보관합니다. `.gitignore` 처리 예정입니다.
-
-| 파일 | 설명 |
-|------|------|
-| [_reports/new-artifacts.md](_reports/new-artifacts.md) | 신규 생성 아티팩트 목록 (2026-03-18) |
-| [_reports/ops-automation-changes.md](_reports/ops-automation-changes.md) | 운영 자동화 변경 이력 (런북 + GitLab CI/CD) |
-| [_reports/cleanup-changes.md](_reports/cleanup-changes.md) | docs/ 구조 정리 변경 이력 (2026-03-19) |
-| [_reports/infra-sync-changes.md](_reports/infra-sync-changes.md) | 인프라 동기화 변경 이력 (2026-03-19) |
-| [_reports/final-review.md](_reports/final-review.md) | docs/ 최종 검토 보고서 (2026-03-19) |
-| [_reports/final-fix-changes.md](_reports/final-fix-changes.md) | 최종 수정 변경 이력 (2026-03-19) |
-| [_reports/module-coverage-audit.md](_reports/module-coverage-audit.md) | 모듈 커버리지 감사 보고서 — 10개 문서 × 6개 서비스 커버리지 표 |
-| [_reports/module-gap-fix.md](_reports/module-gap-fix.md) | 모듈 누락 보완 변경 이력 (2026-03-19) |
-| [_reports/header-rename-changes.md](_reports/header-rename-changes.md) | ADR-0007 Phase 3 완료 — 헤더명 일괄 업데이트 변경 이력 (2026-03-22) |
-
----
-
 ## 설계 철학 요약
 
 **크로스커팅 관심사는 시스템 전체 단일 문서**: API 명세, DB/Cache 설계, 보안, 관측성, 운영 런북은 서비스별로 쪼개지 않고 시스템 전체를 하나의 문서에서 다룹니다.

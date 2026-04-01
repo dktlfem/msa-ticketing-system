@@ -121,7 +121,6 @@ increase(payment_confirm_total{result="cancel_failed"}[1h])
 
 ## 참고 자료
 
-- [`docs/_reports/metric-naming-changes.md`](../../_reports/metric-naming-changes.md) — 변경 전/후 상세 대조표
 - [`docs/observability/observability.md`](../../observability/observability.md) — 메트릭 명칭 기준 문서
 - [`docs/performance/sli-slo.md`](../../performance/sli-slo.md) — 변경 적용 대상 문서
 - [Prometheus Best Practices: Metric and Label Naming](https://prometheus.io/docs/practices/naming/)

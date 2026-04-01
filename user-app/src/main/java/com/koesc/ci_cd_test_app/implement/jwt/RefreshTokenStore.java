@@ -22,12 +22,6 @@ import java.util.concurrent.TimeUnit;
  *
  * - Redis TTL로 만료 관리 → 별도 스케줄러 불필요
  * - 로그아웃 시 해당 Key 삭제로 즉시 무효화
- *
- * [면접 포인트]
- * Q. "왜 DB가 아닌 Redis에 저장하나요?"
- * A. Refresh Token은 조회 빈도가 높고(매 Access Token 재발급 시) 수명이 제한적이므로
- *    TTL 기반 자동 만료가 가능한 Redis가 RDB 대비 적합하다.
- *    또한 토큰 갱신은 단순 Key-Value 조회이므로 Redis의 O(1) 조회 성능이 유리하다.
  */
 @Slf4j
 @Component

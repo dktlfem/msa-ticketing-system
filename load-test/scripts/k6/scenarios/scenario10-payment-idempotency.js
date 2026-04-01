@@ -30,12 +30,6 @@
 //   - 중복 결제 생성: 0건
 //   - 409 + 200(캐시) 합산 = 동시 요청 수 - 1
 //
-// 면접 핵심 포인트:
-//   Q. "네트워크 타임아웃으로 클라이언트가 재시도하면 결제가 두 번 되나요?"
-//   A. "Redis SETNX 기반 멱등성 관리로, 동일 Idempotency-Key는 정확히 1번만
-//       처리됩니다. 동시 재시도는 409, 완료 후 재시도는 캐시된 응답을 반환합니다.
-//       k6로 5건 동시 요청 시 중복 결제 0건을 증명했습니다."
-//
 // 실행:
 //   k6 run \
 //     --env SCG_BASE_URL=http://192.168.124.100:8090 \
@@ -375,7 +369,7 @@ export function handleSummary(data) {
             `Phase 3: 고유 키 10건 → 성공 ${uSucc}건, 실패 ${uFail}건 (P95=${uP95.toFixed(0)}ms).`
         );
         passNotes.push(
-            `면접 포인트: "Redis SETNX 기반 멱등성 관리로, ${CONCURRENT_DUPES}건 동시 요청에서도 ` +
+            `포인트: "Redis SETNX 기반 멱등성 관리로, ${CONCURRENT_DUPES}건 동시 요청에서도 ` +
             `결제가 정확히 1번만 처리되었습니다. 중복 결제 0건."`
         );
     }

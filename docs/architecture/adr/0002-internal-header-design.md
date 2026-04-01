@@ -160,8 +160,6 @@ SCG의 `RequestSanitizeFilter`가 외부 요청에서 `X-Auth-User-Id`를 제거
 
 ## 참고 자료
 
-- [`docs/_reports/code-header-fix.md`](../../_reports/code-header-fix.md) — `X-User-Id` → `X-Auth-User-Id` 코드 변경 상세 내역
-- [`docs/_reports/code-doc-consistency.md`](../../_reports/code-doc-consistency.md) — 헤더 불일치 최초 발견 리포트
 - [`docs/api/api-spec.md`](../../api/api-spec.md) — 공통 헤더 표 (1.2항)
 - [`docs/architecture/overview.md`](../overview.md) — 서비스 간 호출 의존성 및 보안 구조
 - [RFC 6648 — Deprecating the "X-" Prefix and Similar Constructs in Application Protocols](https://www.rfc-editor.org/rfc/rfc6648)

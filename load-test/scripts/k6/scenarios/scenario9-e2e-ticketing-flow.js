@@ -26,12 +26,6 @@
 //   5xx 에러율 < 30% (Bulkhead/CB에 의한 정상 리젝션 허용)
 //   Step5(PG 승인)는 외부 의존성이므로 optional (스테이징 환경 한계)
 //
-// 면접 핵심 포인트:
-//   Q. "서비스 간 전체 흐름이 실제로 동작하는지 어떻게 검증했나요?"
-//   A. "k6로 대기열 입장부터 결제 승인까지 5단계 E2E 플로우를 자동화하여
-//       각 단계 레이턴시와 전체 성공률을 측정했습니다.
-//       서비스 간 연동 병목은 Jaeger 분산 추적으로 식별합니다."
-//
 // 실행:
 //   k6 run \
 //     --env SCG_BASE_URL=http://192.168.124.100:8090 \
@@ -384,7 +378,7 @@ export function e2eFlow() {
     //      스테이징 환경에 유효한 PG API Key가 없어 항상 401 반환.
     //      따라서 내부 서비스 E2E(대기열→예매→결제요청)는 Step4까지를 완주 기준으로 측정.
     //      Step5는 optional로 시도하되 실패해도 E2E 성공에 영향 없음.
-    //      면접 포인트: "외부 PG 의존성을 E2E 테스트에서 어떻게 분리했는지"
+    //      포인트: "외부 PG 의존성을 E2E 테스트에서 어떻게 분리했는지"
     const e2eTotalMs = Date.now() - e2eStart;
     e2eTotalDuration.add(e2eTotalMs);
     e2eCompleteRate.add(1);
@@ -524,7 +518,7 @@ export function handleSummary(data) {
             `reserve=${step3P95.toFixed(0)}ms → pay_req=${step4P95.toFixed(0)}ms → pay_confirm=${step5P95.toFixed(0)}ms`
         );
         passNotes.push(
-            `면접 포인트: "외부 PG 의존성을 E2E 테스트에서 격리하여 내부 서비스(대기열→예매→결제요청) ` +
+            `포인트: "외부 PG 의존성을 E2E 테스트에서 격리하여 내부 서비스(대기열→예매→결제요청) ` +
             `안정성을 독립적으로 측정했습니다. ${(completeRate*100).toFixed(0)}% 완주율, P95=${e2eP95.toFixed(0)}ms. ` +
             `병목 구간은 Jaeger 분산 추적으로 식별합니다."`
         );

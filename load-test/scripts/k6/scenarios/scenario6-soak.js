@@ -338,7 +338,7 @@ export function handleSummary(data) {
             );
         }
         passNotes.push(
-            `면접 포인트: "${DURATION} Soak Test에서 레이턴시 증가나 에러율 급증이 없었습니다. ` +
+            `포인트: "${DURATION} Soak Test에서 레이턴시 증가나 에러율 급증이 없었습니다. ` +
             `메모리 누수 여부는 Grafana jvm.memory.used 추세로 별도 확인합니다."`
         );
     }
