@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.web.server.WebFilterChain;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -29,13 +29,13 @@ import static org.mockito.Mockito.*;
  *
  * 테스트 전략:
  *   - @SpringBootTest 없이 MockServerWebExchange 직접 생성
- *   - GatewayFilterChain을 Mockito mock으로 대체
+ *   - WebFilterChain을 Mockito mock으로 대체
  *   - filter() 결과를 StepVerifier로 검증 (Reactive)
  */
 class InternalPathBlockFilterTest {
 
     private InternalPathBlockFilter filter;
-    private GatewayFilterChain chain;
+    private WebFilterChain chain;
 
     @BeforeEach
     void setUp() {
@@ -44,7 +44,7 @@ class InternalPathBlockFilterTest {
         ReflectionTestUtils.setField(filter, "blockedPatternsRaw", "/internal/**");
         filter.init();
 
-        chain = mock(GatewayFilterChain.class);
+        chain = mock(WebFilterChain.class);
         when(chain.filter(any())).thenReturn(Mono.empty());
     }
 
