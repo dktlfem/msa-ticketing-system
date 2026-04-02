@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.0"
+    }
+}
+
+dependencies {
+    // shared-kernel은 순수 라이브러리 — Spring Boot 스타터 없이 jackson-databind만 사용
+    // ADR: WebFlux(scg-app)와 MVC(booking/payment-app) 모두에서 의존할 수 있도록
+    //       Spring 관련 의존성을 배제한다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// 이 모듈은 실행 가능한 애플리케이션이 아닌 라이브러리이다.
+bootJar { enabled = false }
+jar { enabled = true }
