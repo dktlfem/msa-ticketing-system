@@ -46,14 +46,29 @@ pipeline {
             steps {
                 sh '''
                     apt-get update
-                    apt-get install -y docker.io
-                    # 💡 [필수 추가] docker.io 패키지 설치 후 'docker' 명령 사용 가능하도록 심볼릭 링크 생성 (데비안 계열 OS)
+                    apt-get install -y docker.io dos2unix
                     ln -s /usr/bin/docker.io /usr/local/bin/docker || true
                 '''
             }
         }
         
-        // 선택한 모듈만 정밀 빌드
+        // 품질 게이트: 선택한 모듈의 단위·통합 테스트 실행
+        // ADR: -x test 제거 — 테스트 통과 없이 Docker 이미지를 생성하지 않는다
+        stage('Test') {
+            steps {
+                sh 'dos2unix ./gradlew'
+                sh 'chmod +x ./gradlew'
+                sh "./gradlew :${params.TARGET_MODULE}:test"
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true,
+                          testResults: "${params.TARGET_MODULE}/build/test-results/**/*.xml"
+                }
+            }
+        }
+
+        // 선택한 모듈만 bootJar 생성 (테스트는 위 stage에서 이미 실행 완료)
         stage('Docker Build and Push') {
             steps {
                 script {
@@ -62,14 +77,8 @@ pipeline {
                         // 1. Docker Hub 로그인 (보안 구문 사용)
                         sh 'echo "$PASS" | docker login -u "$USER" --password-stdin' 
                 
-                        // 2. dos2unix 및 gradlew 준비 (줄 끝 문자 오류 해결)
-                        sh 'apt-get install -y dos2unix' 
-                        sh 'dos2unix ./gradlew'
-                        sh 'chmod +x ./gradlew'
-                
-                        // 3. 선택한 모듈만 JAR 파일 생성하여 정밀 빌드 (의존성 포함)
-                        //sh '/bin/bash ./gradlew clean build -x test --refresh-dependencies'
-                        sh "./gradlew :${params.TARGET_MODULE}:clean :${params.TARGET_MODULE}:build -x test" 
+                        // 2. 선택한 모듈만 bootJar 생성 (테스트는 Test stage에서 완료)
+                        sh "./gradlew :${params.TARGET_MODULE}:clean :${params.TARGET_MODULE}:bootJar" 
 
                         def jarPath = sh(script: "ls ${params.TARGET_MODULE}/build/libs/*.jar | grep -v plain", returnStdout: true).trim()
                         sh "docker build --no-cache --build-arg JAR_PATH=${jarPath} -t ${env.DOCKER_IMAGE}:${params.TARGET_MODULE}-${env.BUILD_NUMBER} ."
