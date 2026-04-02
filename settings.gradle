@@ -16,5 +16,8 @@ include 'booking-app'
 include 'payment-app'
 include 'scg-app'
 
+// Shared Kernel (PassportCodec, UserPassport, GatewayHeaders — Spring 의존성 없음)
+include 'ticketing-shared-kernel'
+
 // 공통 모듈 (엔터티, 공통 유틸리티 등)
 include 'common-module'

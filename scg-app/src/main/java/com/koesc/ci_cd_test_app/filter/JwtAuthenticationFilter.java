@@ -1,7 +1,8 @@
 package com.koesc.ci_cd_test_app.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.koesc.ci_cd_test_app.global.gateway.GatewayHeaders;
+import com.koesc.ci_cd_test_app.global.gateway.PassportCodec;
+import com.koesc.ci_cd_test_app.global.gateway.UserPassport;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -25,10 +26,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * JWT 서명 검증 및 인증 컨텍스트 전파 GlobalFilter.
@@ -62,13 +60,7 @@ import java.util.Map;
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final Base64.Encoder BASE64_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final String BEARER_PREFIX = "Bearer ";
-
-    // ADR-0007 신규 헤더 (scg-app은 common-module 미의존이므로 자체 상수)
-    private static final String HEADER_AUTH_PASSPORT = "Auth-Passport";
-    private static final String HEADER_AUTH_USER_ID = "Auth-User-Id";
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -106,13 +98,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     ? claims.getIssuedAt().getTime() / 1000
                     : 0L;
             String clientIp = resolveClientIp(exchange);
-            String passport = buildPassport(userId, roles, jti, issuedAt, clientIp);
+            String passport = PassportCodec.encode(
+                    new UserPassport(userId, roles, jti, issuedAt, clientIp));
 
             log.debug("[JWT_AUTH] userId={} path={}", userId, path);
 
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
-                    .header(HEADER_AUTH_PASSPORT, passport)
-                    .header(HEADER_AUTH_USER_ID, userId)
+                    .header(GatewayHeaders.AUTH_PASSPORT, passport)
+                    .header(GatewayHeaders.AUTH_USER_ID, userId)
                     .build();
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
@@ -143,23 +136,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return (List<String>) list;
         }
         return List.of(roles.toString().split(","));
-    }
-
-    private String buildPassport(String userId, List<String> roles, String jti,
-                                 long issuedAt, String clientIp) {
-        Map<String, Object> passport = new LinkedHashMap<>();
-        passport.put("userId", userId);
-        passport.put("roles", roles);
-        passport.put("jti", jti);
-        passport.put("issuedAt", issuedAt);
-        passport.put("clientIp", clientIp);
-        try {
-            byte[] json = MAPPER.writeValueAsBytes(passport);
-            return BASE64_ENCODER.encodeToString(json);
-        } catch (JsonProcessingException e) {
-            log.error("[JWT_AUTH] Failed to build Auth-Passport", e);
-            return "";
-        }
     }
 
     private String resolveClientIp(ServerWebExchange exchange) {

@@ -15,6 +15,10 @@ dependencyManagement {
 }
 
 dependencies {
+    // Shared Kernel: PassportCodec, UserPassport, GatewayHeaders, PassportCodecException
+    // api 스코프로 선언하여 downstream 서비스(booking-app, payment-app 등)에 전이 노출
+    api project(':ticketing-shared-kernel')
+
     // 버전 사전(BOM)을 모든 스코프에 적용
     api 'org.hibernate:hibernate-community-dialects:6.5.2.Final'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'

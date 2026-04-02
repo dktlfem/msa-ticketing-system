@@ -5,9 +5,8 @@ package com.koesc.ci_cd_test_app.global.gateway;
  *
  * ADR-0007: RFC 6648 준수(X- 접두어 제거) + Auth-Passport 단일 컨텍스트 헤더 도입.
  *
- * 주의: scg-app은 common-module에 의존하지 않으므로(WebFlux/JPA 충돌)
- *       scg-app 필터는 동일 문자열을 자체 상수로 유지한다.
- *       헤더명 변경 시 scg-app 필터 상수도 함께 수정해야 한다.
+ * 이 클래스는 ticketing-shared-kernel에 위치하여
+ * scg-app(WebFlux)과 downstream 서비스(MVC) 모두에서 참조할 수 있다.
  */
 public final class GatewayHeaders {
 
