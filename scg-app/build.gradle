@@ -18,6 +18,10 @@ dependencies {
      * - mysql driver runtimeOnly
      */
 
+    // Shared Kernel: PassportCodec, UserPassport, GatewayHeaders
+    // ADR: WebFlux/JPA 충돌 없이 인증 컨텍스트 직렬화를 공유하기 위해 shared-kernel에 의존
+    implementation project(':ticketing-shared-kernel')
+
     // 게이트웨이(라우팅)
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
 
