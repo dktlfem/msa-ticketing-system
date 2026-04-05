@@ -1,5 +1,5 @@
 ---
-title: "Architecture Overview: MSA 기반 티켓팅 플랫폼"
+title: "Why MSA: 서비스 경계와 아키텍처 결정"
 last_updated: 2026-03-18
 author: "민석"
 reviewer: ""
@@ -13,7 +13,7 @@ reviewer: ""
 - [Failure Scenarios](#failure-scenarios)
 - [Observability](#observability)
 
-# Architecture Overview: MSA 기반 티켓팅 플랫폼
+# Why MSA: 서비스 경계와 아키텍처 결정
 
 > 이 문서는 시스템의 **왜(Why)**와 **경계(Boundary)**에 집중합니다.
 > 인프라 설계 원칙(IaC 범위, 네트워크 토폴로지, CI/CD 파이프라인)은 이 문서 하단 섹션에 통합되어 있습니다.

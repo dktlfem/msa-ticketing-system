@@ -19,7 +19,7 @@ reviewer: ""
 # Queue Design: waitingroom-app 대기열 설계
 
 > 이 문서는 waitingroom-app의 구조, Redis Sorted Set 기반 대기열 흐름, 토큰 생명주기, 장애 시나리오를 다룬다.
-> MSA 서비스 전체 구조는 [`docs/architecture/overview.md`](../../architecture/overview.md)를 참조한다.
+> MSA 서비스 전체 구조는 [`docs/architecture/why-msa.md`](../../architecture/why-msa.md)를 참조한다.
 > Redis 키 패턴 전체 목록은 [`docs/data/database-cache-design.md`](../../data/database-cache-design.md)를 참조한다.
 > 관측성 설정(traceId, Prometheus, Grafana)은 [`docs/observability/observability.md`](../../observability/observability.md)를 참조한다.
 

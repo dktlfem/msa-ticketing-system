@@ -161,7 +161,7 @@ SCG의 `RequestSanitizeFilter`가 외부 요청에서 `X-Auth-User-Id`를 제거
 ## 참고 자료
 
 - [`docs/api/api-spec.md`](../../api/api-spec.md) — 공통 헤더 표 (1.2항)
-- [`docs/architecture/overview.md`](../overview.md) — 서비스 간 호출 의존성 및 보안 구조
+- [`docs/architecture/why-msa.md`](../why-msa.md) — 서비스 간 호출 의존성 및 보안 구조
 - [RFC 6648 — Deprecating the "X-" Prefix and Similar Constructs in Application Protocols](https://www.rfc-editor.org/rfc/rfc6648)
 - [W3C Trace Context (traceparent / tracestate)](https://www.w3.org/TR/trace-context/)
 - [Micrometer Tracing — MDC 자동 주입](https://micrometer.io/docs/tracing)
