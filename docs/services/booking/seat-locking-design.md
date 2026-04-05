@@ -21,7 +21,7 @@ reviewer: ""
 > 이 문서는 booking-app의 책임 경계, 좌석 선점 흐름, 예약 상태 전이, 동시성 제어 방식을 다룬다.
 > concert-app의 SeatEntity(@Version) 상세와 DB 스키마는 [`docs/data/database-cache-design.md`](../../data/database-cache-design.md)를 참조한다.
 > payment-app의 confirm 후 booking confirm 호출 흐름은 [`docs/services/payment/payment-architecture.md`](../payment/payment-architecture.md)를 참조한다.
-> MSA 서비스 전체 의존 방향은 [`docs/architecture/overview.md`](../../architecture/overview.md)를 참조한다.
+> MSA 서비스 전체 의존 방향은 [`docs/architecture/why-msa.md`](../../architecture/why-msa.md)를 참조한다.
 
 ---
 

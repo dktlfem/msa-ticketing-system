@@ -246,7 +246,7 @@ User user = User.create(request.email(), request.name(), request.password());
 
 ### R7: user-app JWT 발급 미구현 (중간)
 
-시스템 아키텍처 문서(`architecture/overview.md`)에서 user-app이 JWT를 발급하고 SCG의 `JwtAuthenticationFilter`가 이를 검증하는 구조로 설계되어 있다. 그러나 **현재 user-app에는 JWT 발급 로직이 없다.**
+시스템 아키텍처 문서(`architecture/why-msa.md`)에서 user-app이 JWT를 발급하고 SCG의 `JwtAuthenticationFilter`가 이를 검증하는 구조로 설계되어 있다. 그러나 **현재 user-app에는 JWT 발급 로직이 없다.**
 
 현재 상태:
 - user-app: signup / getInfo / ai-test 3개 엔드포인트만 있음. `/api/v1/users/login` 없음

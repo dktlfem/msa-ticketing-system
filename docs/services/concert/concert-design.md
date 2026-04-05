@@ -1,7 +1,7 @@
 # Concert-App 설계
 
 > **관련 문서**:
-> - 시스템 전체 서비스 경계: [`docs/architecture/overview.md`](../../architecture/overview.md)
+> - 시스템 전체 서비스 경계: [`docs/architecture/why-msa.md`](../../architecture/why-msa.md)
 > - 내부 API 계약: [`docs/api/api-spec.md`](../../api/api-spec.md) — 섹션 3 (외부), 섹션 8 (내부)
 > - DB 스키마 전체: [`docs/data/database-cache-design.md`](../../data/database-cache-design.md)
 >

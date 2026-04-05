@@ -296,7 +296,7 @@ Client → GET /api/bookings (with tampered Auth-Passport)
 
 ## 관련 문서
 
-- [Architecture Overview](./overview.md) — 서비스 경계와 MSA 설계
+- [Architecture Overview](./why-msa.md) — 서비스 경계와 MSA 설계
 - [ADR-0002: Internal Header Design](./adr/0002-internal-header-design.md) — 서비스 간 헤더 규약
 - [ADR-0004: JWT Validation in SCG](./adr/0004-jwt-validation-in-scg.md) — Gateway 인증 흐름
 - [ADR-0007: Header Naming and Auth-Passport](./adr/0007-header-naming-and-auth-passport.md) — A001 연동 맥락
