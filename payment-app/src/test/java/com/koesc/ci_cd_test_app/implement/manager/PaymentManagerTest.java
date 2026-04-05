@@ -35,9 +35,6 @@ import static org.mockito.Mockito.*;
 /**
  * PaymentManager Saga 패턴 단위 테스트.
  *
- * [면접 포인트]
- * 이 테스트는 분산 트랜잭션에서 발생 가능한 3가지 실패 시나리오를 증명한다:
- *
  * 시나리오 1: TossPayments PG 승인 실패 → READY → FAILED (보상 불필요, 돈이 빠져나가지 않음)
  * 시나리오 2: booking-app 예약 확정 실패 → APPROVED 후 보상 트랜잭션 → REFUNDED (돈 환불)
  * 시나리오 3: 보상 트랜잭션(PG 취소)마저 실패 → CANCEL_FAILED (수동 개입 필요)
@@ -166,11 +163,6 @@ class PaymentManagerTest {
 
             // then: booking-app에 confirm 요청도 전달되지 않음
             verify(bookingClient, never()).confirmReservation(anyLong(), anyLong());
-
-            // [면접 포인트]
-            // PG 승인 전 실패이므로 고객 돈이 빠져나가지 않는다.
-            // Reservation은 여전히 PENDING 상태 → 만료 시 자동 CANCELLED.
-            // 즉, 별도 보상 트랜잭션 없이도 데이터 정합성이 유지된다.
         }
 
         @Test
@@ -258,11 +250,6 @@ class PaymentManagerTest {
                     eq("예약 확정 실패로 인한 자동 환불"));
             // 5단계: DB REFUNDED 업데이트
             verify(paymentWriter).updateToRefunded(eq(PAYMENT_ID), any(LocalDateTime.class));
-
-            // [면접 포인트]
-            // PG 승인 후 booking-app 확정이 실패하면 "고객 돈이 빠져나간 상태"이므로
-            // 반드시 PG cancelPayment를 호출하여 환불해야 한다.
-            // 이것이 Saga 패턴의 보상 트랜잭션(Compensating Transaction)이다.
         }
 
         @Test
@@ -353,12 +340,6 @@ class PaymentManagerTest {
 
             // then: REFUNDED로는 전이되지 않음
             verify(paymentWriter, never()).updateToRefunded(anyLong(), any(LocalDateTime.class));
-
-            // [면접 포인트]
-            // 이 상태는 "고객 돈이 PG에 묶인 채 예약은 안 된 상태"이다.
-            // 자동 복구가 불가능하므로 [CRITICAL] 로그를 남기고
-            // 운영팀이 수동으로 PG 관리자 페이지에서 환불 처리해야 한다.
-            // 실제 서비스에서는 AlertManager/PagerDuty 알림을 트리거한다.
         }
 
         @Test
