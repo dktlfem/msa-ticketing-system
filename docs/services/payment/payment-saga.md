@@ -335,5 +335,5 @@ Client → POST /confirm (Idempotency-Key: "abc-123")
 | [`payment-architecture.md`](./payment-architecture.md) | 결제 도메인 내부 설계 (트랜잭션 경계, 상태 전이, 장애 시나리오) |
 | [`docs/api/api-spec.md`](../../api/api-spec.md) | 결제 API 계약 (엔드포인트, idempotency 흐름, 에러 코드) |
 | [`docs/data/database-cache-design.md`](../../data/database-cache-design.md) | payments DDL, Redis 키 패턴 |
-| [`docs/architecture/overview.md`](../../architecture/overview.md) | MSA 서비스 의존 방향 |
+| [`docs/architecture/why-msa.md`](../../architecture/why-msa.md) | MSA 서비스 의존 방향 |
 | [`docs/architecture/adr/`](../../architecture/adr/) | ADR-0007: Auth-Passport 헤더 체계 |

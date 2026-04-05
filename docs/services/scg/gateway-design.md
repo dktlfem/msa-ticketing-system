@@ -1,7 +1,7 @@
 # Gateway 설계: scg-app
 
 > **관련 문서**:
-> - 시스템 전체 서비스 경계: [`docs/architecture/overview.md`](../../architecture/overview.md)
+> - 시스템 전체 서비스 경계: [`docs/architecture/why-msa.md`](../../architecture/why-msa.md)
 > - 헤더 설계 결정: [`docs/architecture/adr/0002-internal-header-design.md`](../../architecture/adr/0002-internal-header-design.md)
 > - API 라우팅 규칙: [`docs/api/api-spec.md`](../../api/api-spec.md)
 > - 보안 통제: [`docs/security/security-design.md`](../../security/security-design.md)

@@ -21,7 +21,7 @@ reviewer: ""
 > 이 문서는 payment-app의 내부 구조, 상태 전이, 트랜잭션 경계, 외부 서비스 의존성을 다룬다.
 > API 계약(엔드포인트, 요청/응답 형식)은 [`docs/api/api-spec.md`](../../api/api-spec.md)를 참조한다.
 > DB 스키마·Redis 키 패턴은 [`docs/data/database-cache-design.md`](../../data/database-cache-design.md)를 참조한다.
-> 전체 MSA 서비스 의존 방향은 [`docs/architecture/overview.md`](../../architecture/overview.md)를 참조한다.
+> 전체 MSA 서비스 의존 방향은 [`docs/architecture/why-msa.md`](../../architecture/why-msa.md)를 참조한다.
 > Saga 흐름 개요는 이 문서 하단 `## Saga 흐름 다이어그램` 섹션을 참조한다.
 
 ---
@@ -86,7 +86,7 @@ payment-app
 **concert-app 직접 의존 — 현재 구조와 trade-off:**
 
 `PaymentManager.createPaymentRequest`는 concert-app을 직접 호출해 좌석 가격을 조회한다.
-[`docs/architecture/overview.md`](../../architecture/overview.md)에 명시된 `payment → booking → concert` 단방향 의존 원칙에서 벗어난다.
+[`docs/architecture/why-msa.md`](../../architecture/why-msa.md)에 명시된 `payment → booking → concert` 단방향 의존 원칙에서 벗어난다.
 
 | 현재 구조 | 권장 구조 (planned) |
 |---------|----------------|

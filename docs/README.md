@@ -19,7 +19,7 @@ author: "민석"
 | 문서 | 설명 |
 |------|------|
 | [architecture/system-overview.md](architecture/system-overview.md) | 6개 서비스 구성, Mermaid 다이어그램 6종 |
-| [architecture/overview.md](architecture/overview.md) | 왜 MSA인가, 서비스 경계, Saga 흐름, IaC 로드맵 |
+| [architecture/why-msa.md](architecture/why-msa.md) | 왜 MSA인가, 서비스 경계, Saga 흐름, IaC 로드맵 |
 | [api/api-spec.md](api/api-spec.md) | 시스템 전체 API 카탈로그 (외부 5개 + 내부 3개 서비스) |
 
 ### 2단계 — 핵심 도메인 설계 (30분)
@@ -52,7 +52,7 @@ author: "민석"
 | 파일 | 설명 |
 |------|------|
 | [architecture/system-overview.md](architecture/system-overview.md) | 시스템 전체 아키텍처 다이어그램 (Mermaid 6종) |
-| [architecture/overview.md](architecture/overview.md) | 서비스 경계, 의존성, 통신 방식, IaC 로드맵 |
+| [architecture/why-msa.md](architecture/why-msa.md) | 서비스 경계, 의존성, 통신 방식, IaC 로드맵 |
 | [architecture/adr/0000-template.md](architecture/adr/0000-template.md) | ADR 경량 템플릿 |
 | [architecture/adr/0001-single-counter-metric-naming.md](architecture/adr/0001-single-counter-metric-naming.md) | ADR-0001: 단일 카운터 메트릭 명명 규칙 |
 
@@ -112,7 +112,7 @@ author: "민석"
 
 | 파일 | 설명 |
 |------|------|
-| [07-performance-test-runbook.md](07-performance-test-runbook.md) | Java CountDownLatch 기반 동시성 테스트 (k6 런북은 `performance/` 참조) |
+| [performance/concurrency-test-runbook.md](performance/concurrency-test-runbook.md) | Java CountDownLatch 기반 동시성 테스트 (k6 런북은 `performance/` 참조) |
 
 ---
 
