@@ -1,0 +1,219 @@
+# =============================================================================
+# Prometheus Recording Rules — MSA 티켓팅 시스템
+# =============================================================================
+# 목적: SLI 메트릭을 사전 계산하여 Grafana 쿼리 비용 절감 및 Alert Rules 재사용
+# 관련 문서: docs/performance/sli-slo.md
+# 배포 방법: docs/observability/alerting/README.md 참조
+#
+# ADR: Recording Rule을 도입하는 이유
+#   - 문제: rate() + histogram_quantile() 조합을 매번 실시간으로 계산하면
+#           Prometheus 쿼리 비용이 높고, 동일 expr이 Dashboard/Alert 양쪽에서 중복된다.
+#   - 결정: 자주 사용하는 SLI 쿼리를 recording rule로 사전 계산한다.
+#   - 트레이드오프: 스토리지 사용량 증가 (미미) vs 쿼리 응답 속도 개선 + 일관성 보장.
+# =============================================================================
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Group 1: 서비스별 Availability & Error Rate (5분 window)
+  # ---------------------------------------------------------------------------
+  - name: sli:availability
+    interval: 30s
+    rules:
+
+      # --- 서비스별 가용성 SLI ---
+      # 전체 요청 중 5xx가 아닌 응답의 비율. 1.0 = 100% 가용.
+      # 4xx(409 SEAT_ALREADY_HELD 등)는 비즈니스 규칙 집행이므로 가용성에서 제외.
+      - record: sli:http_availability:ratio_rate5m
+        expr: |
+          sum by (application) (
+            rate(http_server_requests_seconds_count{status!~"5.."}[5m])
+          )
+          /
+          sum by (application) (
+            rate(http_server_requests_seconds_count[5m])
+          )
+
+      # --- 서비스별 5xx 에러율 ---
+      - record: sli:http_error_rate:ratio_rate5m
+        expr: |
+          sum by (application) (
+            rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+          )
+          /
+          sum by (application) (
+            rate(http_server_requests_seconds_count[5m])
+          )
+
+      # --- 서비스별 RPS ---
+      - record: sli:http_requests:rate5m
+        expr: |
+          sum by (application) (
+            rate(http_server_requests_seconds_count[5m])
+          )
+
+  # ---------------------------------------------------------------------------
+  # Group 2: Latency Percentiles (5분 window)
+  # ---------------------------------------------------------------------------
+  - name: sli:latency
+    interval: 30s
+    rules:
+
+      # --- 서비스별 P95 레이턴시 ---
+      - record: sli:http_latency_p95:seconds
+        expr: |
+          histogram_quantile(0.95,
+            sum by (application, le) (
+              rate(http_server_requests_seconds_bucket[5m])
+            )
+          )
+
+      # --- 서비스별 P99 레이턴시 ---
+      - record: sli:http_latency_p99:seconds
+        expr: |
+          histogram_quantile(0.99,
+            sum by (application, le) (
+              rate(http_server_requests_seconds_bucket[5m])
+            )
+          )
+
+      # --- 핵심 엔드포인트별 P95 ---
+      # booking: POST /api/v1/reservations (SLO < 800ms)
+      - record: sli:booking_reservations_p95:seconds
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (
+              rate(http_server_requests_seconds_bucket{
+                application="booking-service",
+                uri="/api/v1/reservations",
+                method="POST"
+              }[5m])
+            )
+          )
+
+      # payment: POST /api/v1/payments/confirm (SLO < 5000ms, TossPayments 포함)
+      - record: sli:payment_confirm_p95:seconds
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (
+              rate(http_server_requests_seconds_bucket{
+                application="payment-service",
+                uri="/api/v1/payments/confirm",
+                method="POST"
+              }[5m])
+            )
+          )
+
+      - record: sli:payment_confirm_p99:seconds
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (
+              rate(http_server_requests_seconds_bucket{
+                application="payment-service",
+                uri="/api/v1/payments/confirm",
+                method="POST"
+              }[5m])
+            )
+          )
+
+      # waitingroom: POST /waiting-room/join (SLO < 200ms)
+      - record: sli:waitingroom_join_p95:seconds
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (
+              rate(http_server_requests_seconds_bucket{
+                application="waitingroom-service",
+                uri=~"/waiting-room/join|/api/v1/queue/join",
+                method="POST"
+              }[5m])
+            )
+          )
+
+      # concert: GET /api/v1/events/{id} (SLO < 100ms)
+      - record: sli:concert_events_p95:seconds
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (
+              rate(http_server_requests_seconds_bucket{
+                application="concert-service",
+                uri=~"/api/v1/events/.*",
+                method="GET"
+              }[5m])
+            )
+          )
+
+  # ---------------------------------------------------------------------------
+  # Group 3: SLO Burn Rate (Error Budget 소진 속도)
+  # ---------------------------------------------------------------------------
+  - name: sli:burn_rate
+    interval: 30s
+    rules:
+
+      # --- payment-app SLO burn rate ---
+      # SLO = 99.9% → error budget = 0.001
+      # burn rate = actual_error_rate / error_budget_rate
+      # burn rate > 1 이면 Error Budget을 예정보다 빠르게 소진 중
+      - record: sli:payment_burn_rate:ratio_rate5m
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="payment-service", status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{application="payment-service"}[5m]))
+          )
+          / 0.001
+
+      # 1시간 window burn rate (더 안정적인 신호)
+      - record: sli:payment_burn_rate:ratio_rate1h
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="payment-service", status=~"5.."}[1h]))
+            /
+            sum(rate(http_server_requests_seconds_count{application="payment-service"}[1h]))
+          )
+          / 0.001
+
+      # --- booking-app SLO burn rate ---
+      # SLO = 99.5% → error budget = 0.005
+      - record: sli:booking_burn_rate:ratio_rate5m
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="booking-service", status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{application="booking-service"}[5m]))
+          )
+          / 0.005
+
+  # ---------------------------------------------------------------------------
+  # Group 4: Infrastructure SLI (HikariCP, JVM)
+  # ---------------------------------------------------------------------------
+  - name: sli:infrastructure
+    interval: 30s
+    rules:
+
+      # --- HikariCP 커넥션풀 사용률 ---
+      # 1.0에 가까울수록 커넥션풀 고갈 임박
+      - record: sli:hikaricp_pool_utilization:ratio
+        expr: |
+          hikaricp_connections_active
+          /
+          hikaricp_connections_max
+
+      # --- HikariCP pending 비율 ---
+      # pending > 0이면 커넥션 대기 발생 중
+      - record: sli:hikaricp_pending:count
+        expr: |
+          hikaricp_connections_pending
+
+      # --- JVM 힙 사용률 ---
+      - record: sli:jvm_heap_utilization:ratio
+        expr: |
+          sum by (application) (jvm_memory_used_bytes{area="heap"})
+          /
+          sum by (application) (jvm_memory_max_bytes{area="heap"})
+
+      # --- GC Pause Rate ---
+      - record: sli:jvm_gc_pause:rate5m
+        expr: |
+          sum by (application) (
+            rate(jvm_gc_pause_seconds_sum[5m])
+          )

@@ -1,0 +1,360 @@
+# =============================================================================
+# Prometheus Alert Rules — MSA 티켓팅 시스템
+# =============================================================================
+# 목적: SLO 위반 및 인프라 이상 징후 자동 감지
+# 임계치 근거: docs/performance/sli-slo.md "SLO 위반 시 대응 기준" 테이블
+# 대응 절차: docs/operations/incident-runbook.md
+# 배포 방법: docs/observability/alerting/README.md 참조
+#
+# ADR: 알림 규칙 설계 원칙
+#   - 결정: severity를 P0/P1/P2로 구분하고, AlertManager에서 라우팅 분기.
+#   - P0 = 즉시 대응 (고객 자금), P1 = 5~15분 이내, P2 = 30분 이내.
+#   - for 절: 일시적 스파이크에 의한 false positive 방지. P0만 for 없이 즉시 발화.
+#   - 트레이드오프: for가 길면 감지 지연, 짧으면 noise 증가.
+#     P0(CANCEL_FAILED)은 단 1건도 허용 불가이므로 for 없이 즉시 발화.
+# =============================================================================
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Group 1: Payment 서비스 알림 (가장 엄격 — 고객 자금 관련)
+  # ---------------------------------------------------------------------------
+  - name: alert:payment
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P1] payment-app 5xx 에러율 > 3% (5분 window)
+      # 근거: sli-slo.md "payment 5xx > 3% → P1, 5분 이내 대응"
+      # 대응: INC-001 (PG 오류) 또는 INC-003 (CANCEL_FAILED) 절차
+      # -----------------------------------------------------------------------
+      - alert: PaymentHighErrorRate
+        expr: sli:http_error_rate:ratio_rate5m{application="payment-service"} > 0.03
+        for: 2m
+        labels:
+          severity: P1
+          service: payment-app
+          runbook: INC-001
+        annotations:
+          summary: "payment-app 5xx 에러율 {{ $value | humanizePercentage }} (임계치: 3%)"
+          description: |
+            payment-service의 5xx 에러율이 {{ $value | humanizePercentage }}로 임계치(3%)를 초과했습니다.
+            SLO 99.9% 위반 임박. Error Budget 월 43분 중 빠르게 소진 중.
+            대응: INC-001 (PG 오류 확인) → TossPayments 상태 페이지 확인.
+          dashboard: "http://192.168.124.100:8080/grafana/d/msa-ticketing-golden-signals-v1?var-service=payment-service"
+
+      # -----------------------------------------------------------------------
+      # [P1] payment-app SLO Burn Rate > 14.4x (1시간에 월 budget 2% 소진)
+      # 근거: sli-slo.md "SLO burn rate alert" 섹션
+      # Google SRE 다중 burn rate 알림 패턴 (fast burn)
+      # -----------------------------------------------------------------------
+      - alert: PaymentSLOBurnRateFast
+        expr: |
+          sli:payment_burn_rate:ratio_rate5m > 14.4
+          and
+          sli:payment_burn_rate:ratio_rate1h > 14.4
+        for: 2m
+        labels:
+          severity: P1
+          service: payment-app
+          slo: "availability-99.9"
+        annotations:
+          summary: "payment-app SLO burn rate {{ $value }}x (fast burn 감지)"
+          description: |
+            5분/1시간 burn rate 모두 14.4x 초과.
+            현재 속도 지속 시 월 Error Budget(43분)이 약 1시간 내 소진됩니다.
+
+      # -----------------------------------------------------------------------
+      # [P1] payment-app /confirm P95 > 5000ms (SLO 위반)
+      # 근거: sli-slo.md payment /confirm latency SLO < 5000ms
+      # TossPayments read timeout이 10s이므로 5s 초과 시 PG 지연 의심
+      # -----------------------------------------------------------------------
+      - alert: PaymentConfirmLatencyHigh
+        expr: sli:payment_confirm_p95:seconds > 5
+        for: 3m
+        labels:
+          severity: P1
+          service: payment-app
+          runbook: INC-007
+        annotations:
+          summary: "payment /confirm P95 레이턴시 {{ $value | humanizeDuration }} (SLO: 5s)"
+          description: |
+            TossPayments 응답 지연 가능성 높음. P95가 5s를 초과하면
+            read timeout(10s) 도달 → PG 오류 연쇄 가능.
+            대응: INC-007 (TossPayments 외부 지연) 절차.
+
+  # ---------------------------------------------------------------------------
+  # Group 2: Booking 서비스 알림
+  # ---------------------------------------------------------------------------
+  - name: alert:booking
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P2] booking-app P95 > 2000ms (5분 지속)
+      # 근거: sli-slo.md "booking P95 > 2000ms → P2, 30분 이내"
+      # SLO는 800ms이지만, 알림은 2000ms부터 (경고 마진)
+      # -----------------------------------------------------------------------
+      - alert: BookingLatencyHigh
+        expr: sli:booking_reservations_p95:seconds > 2
+        for: 5m
+        labels:
+          severity: P2
+          service: booking-app
+          runbook: INC-005
+        annotations:
+          summary: "booking /reservations P95 {{ $value | humanizeDuration }} (임계치: 2s)"
+          description: |
+            booking-app 레이턴시 SLO(800ms) 대비 크게 초과.
+            HikariCP 커넥션풀 또는 DB 조회 성능 확인 필요.
+
+      # -----------------------------------------------------------------------
+      # [P1] booking-app SLO burn rate > 14.4x
+      # SLO = 99.5% → error budget = 0.005
+      # -----------------------------------------------------------------------
+      - alert: BookingSLOBurnRateFast
+        expr: sli:booking_burn_rate:ratio_rate5m > 14.4
+        for: 2m
+        labels:
+          severity: P1
+          service: booking-app
+          slo: "availability-99.5"
+        annotations:
+          summary: "booking-app SLO burn rate {{ $value }}x (fast burn)"
+          description: |
+            booking-service Error Budget(월 3.6시간)이 빠르게 소진 중.
+
+  # ---------------------------------------------------------------------------
+  # Group 3: Waitingroom 서비스 알림
+  # ---------------------------------------------------------------------------
+  - name: alert:waitingroom
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P1] waitingroom 5xx > 1% (5분 window)
+      # 근거: sli-slo.md "waitingroom join 5xx > 1% → P1, 5분 이내"
+      # Redis 장애와 직결. Redis single node이므로 SPOF.
+      # -----------------------------------------------------------------------
+      - alert: WaitingroomHighErrorRate
+        expr: sli:http_error_rate:ratio_rate5m{application="waitingroom-service"} > 0.01
+        for: 2m
+        labels:
+          severity: P1
+          service: waitingroom-app
+          runbook: INC-004
+        annotations:
+          summary: "waitingroom 5xx 에러율 {{ $value | humanizePercentage }} (임계치: 1%)"
+          description: |
+            waitingroom은 Redis에 의존. 5xx 급증 시 Redis 장애 연동 가능성 높음.
+            대응: INC-004 (Redis 장애) 절차 — redis-cli PING 확인.
+
+      # -----------------------------------------------------------------------
+      # [P2] waitingroom /join P95 > 200ms
+      # 근거: sli-slo.md waitingroom latency SLO < 200ms
+      # -----------------------------------------------------------------------
+      - alert: WaitingroomLatencyHigh
+        expr: sli:waitingroom_join_p95:seconds > 0.2
+        for: 5m
+        labels:
+          severity: P2
+          service: waitingroom-app
+        annotations:
+          summary: "waitingroom /join P95 {{ $value | humanizeDuration }} (SLO: 200ms)"
+          description: |
+            Redis ZADD 연산 지연 가능성. Redis 메모리/커넥션 확인 필요.
+
+  # ---------------------------------------------------------------------------
+  # Group 4: Concert 서비스 알림
+  # ---------------------------------------------------------------------------
+  - name: alert:concert
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P2] concert /events P95 > 500ms (5분 지속)
+      # 근거: sli-slo.md "concert GET /events P95 > 500ms → P2, 30분 이내"
+      # SLO는 100ms이지만, Caffeine 캐시 cold start 고려하여 500ms에서 경보
+      # -----------------------------------------------------------------------
+      - alert: ConcertEventsLatencyHigh
+        expr: sli:concert_events_p95:seconds > 0.5
+        for: 5m
+        labels:
+          severity: P2
+          service: concert-app
+          runbook: INC-008
+        annotations:
+          summary: "concert /events P95 {{ $value | humanizeDuration }} (임계치: 500ms)"
+          description: |
+            Caffeine L1 캐시 미히트 또는 DB 부하.
+            cold start 후 자동 복구되는지 5분 추가 관찰.
+
+      # -----------------------------------------------------------------------
+      # [P1] concert seat HOLD 5xx > 5%
+      # 근거: sli-slo.md "concert seat HOLD 5xx > 5% → P1, 10분 이내"
+      # 409(SEAT_ALREADY_HELD)는 정상. 5xx만 감지.
+      # -----------------------------------------------------------------------
+      - alert: ConcertSeatHoldServerError
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{
+              application="concert-service",
+              uri=~"/api/v1/seats/.*",
+              status=~"5.."
+            }[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{
+              application="concert-service",
+              uri=~"/api/v1/seats/.*"
+            }[5m]))
+          ) > 0.05
+        for: 3m
+        labels:
+          severity: P1
+          service: concert-app
+          runbook: INC-008
+        annotations:
+          summary: "concert seat HOLD 5xx 에러율 {{ $value | humanizePercentage }} (임계치: 5%)"
+          description: |
+            409(optimistic lock 충돌)는 정상이지만, 5xx는 서버 오류.
+            INC-008 절차로 DB 커넥션풀/lock contention 확인.
+
+  # ---------------------------------------------------------------------------
+  # Group 5: User 서비스 알림
+  # ---------------------------------------------------------------------------
+  - name: alert:user
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P2] user signup 5xx > 2%
+      # 근거: sli-slo.md "user signup 5xx > 2% → P2, 30분 이내"
+      # -----------------------------------------------------------------------
+      - alert: UserHighErrorRate
+        expr: sli:http_error_rate:ratio_rate5m{application="user-service"} > 0.02
+        for: 5m
+        labels:
+          severity: P2
+          service: user-app
+          runbook: INC-009
+        annotations:
+          summary: "user-app 5xx 에러율 {{ $value | humanizePercentage }} (임계치: 2%)"
+          description: |
+            user-app DB 커넥션 또는 UK(이메일) 위반 외 서버 오류 확인.
+            대응: INC-009 절차.
+
+  # ---------------------------------------------------------------------------
+  # Group 6: SCG (Spring Cloud Gateway) 알림
+  # ---------------------------------------------------------------------------
+  - name: alert:scg
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P1] CircuitBreaker OPEN 감지
+      # Resilience4j CB state: 0=CLOSED, 1=OPEN, 2=HALF_OPEN
+      # CB가 OPEN으로 전환되면 해당 downstream 서비스로의 요청이 차단됨
+      # -----------------------------------------------------------------------
+      - alert: CircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{state="open"} == 1
+        for: 0s
+        labels:
+          severity: P1
+          service: scg-app
+          runbook: INC-006
+        annotations:
+          summary: "CircuitBreaker OPEN: {{ $labels.name }} (downstream 차단 중)"
+          description: |
+            SCG CircuitBreaker {{ $labels.name }}이 OPEN 상태.
+            해당 downstream 서비스로의 모든 요청이 fallback 처리 중.
+            대응: INC-006 (SCG 라우팅 문제) 절차.
+            Grafana: Golden Signals 대시보드 Row 5 (CircuitBreaker) 확인.
+
+      # -----------------------------------------------------------------------
+      # [P2] SCG 전체 에러율 > 5%
+      # -----------------------------------------------------------------------
+      - alert: SCGHighErrorRate
+        expr: sli:http_error_rate:ratio_rate5m{application="scg-service"} > 0.05
+        for: 3m
+        labels:
+          severity: P2
+          service: scg-app
+        annotations:
+          summary: "SCG 전체 에러율 {{ $value | humanizePercentage }} (임계치: 5%)"
+          description: |
+            SCG 레벨에서 에러율이 높으면 다수 downstream 서비스 동시 장애 가능성.
+
+  # ---------------------------------------------------------------------------
+  # Group 7: Infrastructure 알림 (DB, Redis, JVM)
+  # ---------------------------------------------------------------------------
+  - name: alert:infrastructure
+    rules:
+
+      # -----------------------------------------------------------------------
+      # [P1] HikariCP 커넥션풀 사용률 > 80%
+      # 근거: sli-slo.md "HikariCP 고갈 → booking latency SLO 위반"
+      # max 20개 중 16개 이상 사용 시 경보
+      # -----------------------------------------------------------------------
+      - alert: HikariCPPoolExhaustion
+        expr: sli:hikaricp_pool_utilization:ratio > 0.8
+        for: 3m
+        labels:
+          severity: P1
+          runbook: INC-005
+        annotations:
+          summary: "{{ $labels.application }} HikariCP 사용률 {{ $value | humanizePercentage }} (임계치: 80%)"
+          description: |
+            커넥션풀 고갈 임박. pending 요청이 증가하면 latency 급등.
+            max pool size: 20. 현재 active: {{ $value }} × 20.
+            대응: INC-005 (MySQL 장애/지연) — slow query 확인.
+
+      # -----------------------------------------------------------------------
+      # [P2] HikariCP pending > 0 (3분 지속)
+      # pending이 지속적으로 존재하면 커넥션 대기 큐 발생 중
+      # -----------------------------------------------------------------------
+      - alert: HikariCPPendingConnections
+        expr: sli:hikaricp_pending:count > 0
+        for: 3m
+        labels:
+          severity: P2
+        annotations:
+          summary: "{{ $labels.application }} HikariCP pending 커넥션 {{ $value }}개"
+          description: |
+            커넥션 대기가 발생 중. slow query 또는 트래픽 급증 확인.
+
+      # -----------------------------------------------------------------------
+      # [P2] JVM 힙 사용률 > 85%
+      # -----------------------------------------------------------------------
+      - alert: JVMHeapHigh
+        expr: sli:jvm_heap_utilization:ratio > 0.85
+        for: 5m
+        labels:
+          severity: P2
+        annotations:
+          summary: "{{ $labels.application }} JVM 힙 사용률 {{ $value | humanizePercentage }} (임계치: 85%)"
+          description: |
+            OOM 위험. GC 빈도 증가 → latency 스파이크 가능.
+            Grafana Golden Signals Row 3 (JVM) 확인.
+
+      # -----------------------------------------------------------------------
+      # [P2] GC Pause 비율 > 5% (5분 window)
+      # 5분 중 5% 이상 시간을 GC에 소비하면 성능 저하
+      # -----------------------------------------------------------------------
+      - alert: JVMGCPressure
+        expr: sli:jvm_gc_pause:rate5m > 0.05
+        for: 5m
+        labels:
+          severity: P2
+        annotations:
+          summary: "{{ $labels.application }} GC pause 비율 {{ $value | humanizePercentage }}"
+          description: |
+            5분 중 {{ $value | humanizePercentage }}를 GC에 소비.
+            힙 증설 또는 GC 튜닝 검토 필요.
+
+      # -----------------------------------------------------------------------
+      # [P1] 서비스 다운 감지 (Prometheus scrape target 실패)
+      # -----------------------------------------------------------------------
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: P1
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.instance }}) 서비스 다운"
+          description: |
+            Prometheus가 {{ $labels.instance }}에서 메트릭을 수집하지 못합니다.
+            서비스 프로세스 또는 네트워크 확인 필요.
