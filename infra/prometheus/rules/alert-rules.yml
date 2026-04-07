@@ -358,3 +358,21 @@ groups:
           description: |
             Prometheus가 {{ $labels.instance }}에서 메트릭을 수집하지 못합니다.
             서비스 프로세스 또는 네트워크 확인 필요.
+
+      # -----------------------------------------------------------------------
+      # [P1] Redis 서버 다운 (미니 PC — 192.168.124.101)
+      # 기존 alert_rules.yml에서 마이그레이션
+      # Redis는 waitingroom(ZADD), payment(idempotency), booking(분산락)의 SPOF
+      # -----------------------------------------------------------------------
+      - alert: RedisServerDown
+        expr: redis_up{instance="mini-pc-redis"} == 0 or up{job="mini-pc-redis"} == 0
+        for: 1m
+        labels:
+          severity: P1
+          runbook: INC-004
+        annotations:
+          summary: "미니 PC Redis 서버 다운 감지"
+          description: |
+            미니 PC(192.168.124.101)의 Redis 서버가 1분 이상 응답하지 않습니다.
+            waitingroom(대기열), payment(idempotency), booking(분산락) 모두 영향.
+            대응: INC-004 (Redis 장애) 절차.
