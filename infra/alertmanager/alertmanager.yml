@@ -1,0 +1,143 @@
+# =============================================================================
+# AlertManager Configuration — MSA 티켓팅 시스템
+# =============================================================================
+# 목적: Prometheus alert rules에서 발화된 알림을 severity별로 라우팅
+# 배포: docs/observability/alerting/README.md 참조
+#
+# ADR: 수신자(receiver) 설계
+#   - 현재: webhook_url 플레이스홀더. 실제 배포 시 Slack/Discord/Email로 교체.
+#   - 결정: severity 기반 라우팅 (P0 → critical, P1 → warning, P2 → info)
+#   - 이유: P0(CANCEL_FAILED)은 고객 자금 관련이므로 즉시 알림,
+#           P2는 30분 이내 대응이므로 묶어서 전달(group_wait 3m).
+#   - 트레이드오프: 수신자 단일화(단순) vs 분리(noise 관리).
+#     개인 프로젝트이므로 단일 채널에 severity label로 구분하되,
+#     P0만 별도 repeat_interval(5m)로 재알림.
+# =============================================================================
+
+global:
+  # 알림 해소(resolve) 메시지 전송 여부
+  resolve_timeout: 5m
+
+  # -----------------------------------------------------------------------
+  # SMTP 설정 (이메일 알림 사용 시 활성화)
+  # 보안: 실제 비밀번호는 환경변수 또는 Docker secret으로 주입
+  # -----------------------------------------------------------------------
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'alertmanager@ticketing.local'
+  # smtp_auth_username: '${SMTP_USERNAME}'
+  # smtp_auth_password: '${SMTP_PASSWORD}'
+  # smtp_require_tls: true
+
+# =============================================================================
+# Route Tree — severity 기반 라우팅
+# =============================================================================
+route:
+  # 기본 수신자 (매칭되는 하위 라우트가 없을 때)
+  receiver: default-webhook
+
+  # 동일 group_by 키로 묶인 알림을 하나의 notification으로 통합
+  group_by: ['alertname', 'service']
+
+  # 새 알림 그룹 발생 후 첫 notification까지 대기 시간
+  # (짧은 시간 내 연관 알림을 묶기 위함)
+  group_wait: 30s
+
+  # 동일 그룹에 새 알림이 추가될 때 재전송 대기
+  group_interval: 5m
+
+  # 알림이 지속될 때 반복 전송 간격
+  repeat_interval: 4h
+
+  routes:
+    # -----------------------------------------------------------------
+    # P0: 즉시 대응 (CANCEL_FAILED 등)
+    # 현재는 P0 알림이 alert-rules.yml에 없지만(CANCEL_FAILED는
+    # 커스텀 메트릭 planned), 향후 추가 시 이 라우트로 자동 매핑.
+    # -----------------------------------------------------------------
+    - match:
+        severity: P0
+      receiver: critical-webhook
+      group_wait: 0s
+      repeat_interval: 5m
+      continue: false
+
+    # -----------------------------------------------------------------
+    # P1: 5~15분 이내 대응
+    # PaymentHighErrorRate, CircuitBreakerOpen, HikariCPPoolExhaustion 등
+    # -----------------------------------------------------------------
+    - match:
+        severity: P1
+      receiver: warning-webhook
+      group_wait: 15s
+      repeat_interval: 1h
+      continue: false
+
+    # -----------------------------------------------------------------
+    # P2: 30분 이내 대응
+    # BookingLatencyHigh, JVMHeapHigh, UserHighErrorRate 등
+    # -----------------------------------------------------------------
+    - match:
+        severity: P2
+      receiver: default-webhook
+      group_wait: 3m
+      repeat_interval: 4h
+      continue: false
+
+# =============================================================================
+# Inhibition Rules — 상위 알림 발생 시 하위 알림 억제
+# =============================================================================
+inhibit_rules:
+  # ServiceDown 발생 시 해당 서비스의 다른 알림 억제
+  # (서비스가 죽었으면 에러율/레이턴시 알림은 의미 없음)
+  - source_match:
+      alertname: ServiceDown
+    target_match_re:
+      alertname: '.+'
+    equal: ['instance']
+
+  # P1 알림 발생 시 동일 서비스의 P2 알림 억제
+  - source_match:
+      severity: P1
+    target_match:
+      severity: P2
+    equal: ['service']
+
+# =============================================================================
+# Receivers — 알림 전달 대상
+# =============================================================================
+# 보안 주의: webhook URL에 토큰이 포함되므로 절대 하드코딩하지 않는다.
+# 실제 배포 시 환경변수 또는 Docker secret으로 주입한다.
+#
+# 예시:
+#   Slack:   https://hooks.slack.com/services/T00/B00/xxxx
+#   Discord: https://discord.com/api/webhooks/xxx/yyy
+# =============================================================================
+receivers:
+  - name: critical-webhook
+    webhook_configs:
+      - url: 'http://localhost:9095/hooks/critical'
+        send_resolved: true
+    # --- Slack 활성화 시 ---
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_CRITICAL}'
+    #     channel: '#ticketing-critical'
+    #     title: '[P0] {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    #     send_resolved: true
+
+  - name: warning-webhook
+    webhook_configs:
+      - url: 'http://localhost:9095/hooks/warning'
+        send_resolved: true
+    # --- Slack 활성화 시 ---
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_WARNING}'
+    #     channel: '#ticketing-alerts'
+    #     title: '[P1] {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    #     send_resolved: true
+
+  - name: default-webhook
+    webhook_configs:
+      - url: 'http://localhost:9095/hooks/info'
+        send_resolved: true
