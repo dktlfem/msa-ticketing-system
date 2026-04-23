@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saga 패턴 보상 트랜잭션 - 시나리오 증명</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.7;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid #1e293b;
+        }
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            color: #94a3b8;
+        }
+        .header .meta {
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .header .meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* Section */
+        .section {
+            margin-bottom: 48px;
+        }
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .badge {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .badge-green { background: #065f46; color: #6ee7b7; }
+        .badge-yellow { background: #713f12; color: #fde047; }
+        .badge-red { background: #7f1d1d; color: #fca5a5; }
+        .badge-blue { background: #1e3a5f; color: #93c5fd; }
+
+        /* Card */
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Diagram */
+        .diagram-container {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 16px 0;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+        .mermaid { width: 100%; }
+
+        /* Flow steps */
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #0f172a;
+            border-radius: 8px;
+            border-left: 3px solid #334155;
+        }
+        .flow-step.success { border-left-color: #22c55e; }
+        .flow-step.fail { border-left-color: #ef4444; }
+        .flow-step.compensate { border-left-color: #f59e0b; }
+        .flow-step .step-num {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .flow-step.success .step-num { background: #065f46; color: #6ee7b7; }
+        .flow-step.fail .step-num { background: #7f1d1d; color: #fca5a5; }
+        .flow-step.compensate .step-num { background: #713f12; color: #fde047; }
+        .flow-step .step-content { font-size: 14px; }
+        .flow-step .step-content strong { color: #f8fafc; }
+
+        /* Test mapping */
+        .test-mapping {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 16px;
+            border: 1px dashed #334155;
+        }
+        .test-mapping-header {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .test-name {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            color: #a78bfa;
+            padding: 4px 0;
+        }
+        .test-name::before { content: '✓ '; color: #22c55e; }
+
+        /* State table */
+        .state-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+        .state-table th {
+            background: #0f172a;
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #94a3b8;
+            border-bottom: 2px solid #334155;
+        }
+        .state-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #1e293b;
+        }
+        .state-table tr:hover td { background: #1e293b55; }
+        .state-chip {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: monospace;
+        }
+        .state-ready { background: #1e3a5f; color: #93c5fd; }
+        .state-approved { background: #065f46; color: #6ee7b7; }
+        .state-failed { background: #4a1d1d; color: #fca5a5; }
+        .state-refunded { background: #3b2f13; color: #fde68a; }
+        .state-cancel-failed { background: #7f1d1d; color: #fca5a5; }
+        .state-pending { background: #1e3a5f; color: #93c5fd; }
+        .state-confirmed { background: #065f46; color: #6ee7b7; }
+        .state-cancelled { background: #4a1d1d; color: #fca5a5; }
+
+        /* Interview point */
+        .interview-point {
+            background: linear-gradient(135deg, #1e1b4b, #172554);
+            border: 1px solid #3730a3;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 16px;
+        }
+        .interview-point-header {
+            font-size: 12px;
+            color: #818cf8;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .interview-point p {
+            font-size: 14px;
+            color: #c7d2fe;
+        }
+
+        /* Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .summary-item {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .summary-item .number {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .summary-item .label {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding-top: 32px;
+            border-top: 1px solid #1e293b;
+            color: #475569;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Saga 패턴 보상 트랜잭션 증명</h1>
+            <div class="subtitle">MSA 기반 대규모 티켓팅 시스템 — payment-app ↔ booking-app</div>
+            <div class="meta">
+                <span>📅 2026-03-29</span>
+                <span>🧪 22 Tests Passed</span>
+                <span>🏗️ Choreography-based Saga</span>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="number">3</div>
+                <div class="label">실패 시나리오</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">22</div>
+                <div class="label">단위 테스트</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">6</div>
+                <div class="label">상태 전이</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">100%</div>
+                <div class="label">테스트 통과율</div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Payment State Machine -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                Payment 상태 머신 (State Machine)
+                <span class="badge badge-blue">전체 상태 전이 다이어그램</span>
+            </div>
+            <div class="card">
+                <div class="diagram-container">
+                    <div class="mermaid">
+stateDiagram-v2
+    [*] --> READY : 결제 요청 생성
+
+    READY --> APPROVED : PG 승인 성공
+    READY --> FAILED : PG 승인 실패
+
+    APPROVED --> REFUNDED : PG 취소 성공\n(보상 트랜잭션)
+    APPROVED --> CANCEL_FAILED : PG 취소 실패\n(수동 개입 필요)
+
+    CANCEL_FAILED --> REFUNDED : 스케줄러 재시도 성공\n(Eventually Consistent)
+
+    FAILED --> [*]
+    REFUNDED --> [*]
+
+    classDef ready fill:#1e40af,stroke:#3b82f6,color:#dbeafe
+    classDef approved fill:#065f46,stroke:#10b981,color:#d1fae5
+    classDef failed fill:#7f1d1d,stroke:#ef4444,color:#fecaca
+    classDef refunded fill:#713f12,stroke:#eab308,color:#fef9c3
+    classDef cancelFailed fill:#581c87,stroke:#a855f7,color:#f3e8ff
+
+    class READY ready
+    class APPROVED approved
+    class FAILED failed
+    class REFUNDED refunded
+    class CANCEL_FAILED cancelFailed
+                    </div>
+                </div>
+                <table class="state-table">
+                    <thead>
+                        <tr>
+                            <th>상태</th>
+                            <th>의미</th>
+                            <th>고객 돈</th>
+                            <th>예약</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="state-chip state-ready">READY</span></td>
+                            <td>결제 대기 (PG 승인 전)</td>
+                            <td>고객 계좌에 있음</td>
+                            <td><span class="state-chip state-pending">PENDING</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="state-chip state-approved">APPROVED</span></td>
+                            <td>PG 승인 완료</td>
+                            <td>PG로 이동됨</td>
+                            <td><span class="state-chip state-confirmed">CONFIRMED</span> (정상 시)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="state-chip state-failed">FAILED</span></td>
+                            <td>PG 승인 거절</td>
+                            <td>고객 계좌에 있음 (안전)</td>
+                            <td><span class="state-chip state-pending">PENDING</span> → 만료 시 자동 취소</td>
+                        </tr>
+                        <tr>
+                            <td><span class="state-chip state-refunded">REFUNDED</span></td>
+                            <td>환불 완료</td>
+                            <td>고객 계좌로 반환</td>
+                            <td><span class="state-chip state-pending">PENDING</span> → 만료 시 자동 취소</td>
+                        </tr>
+                        <tr>
+                            <td><span class="state-chip state-cancel-failed">CANCEL_FAILED</span></td>
+                            <td>환불 실패 (최악)</td>
+                            <td>⚠️ PG에 묶임</td>
+                            <td><span class="state-chip state-pending">PENDING</span> — 스케줄러 복구 대기</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Happy Path -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                Happy Path: 정상 결제 흐름
+                <span class="badge badge-green">정상</span>
+            </div>
+            <div class="card">
+                <div class="diagram-container">
+                    <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as payment-app
+    participant PG as TossPayments
+    participant B as booking-app
+
+    C->>P: POST /payments/confirm
+    P->>P: 검증 (READY + 금액)
+    P->>PG: confirmPayment()
+    PG-->>P: 승인 성공 ✓
+    P->>P: READY → APPROVED
+    P->>B: confirmReservation()
+    B-->>P: 확정 성공 ✓
+    P-->>C: Payment (APPROVED)
+
+    Note over P,B: 최종: Payment=APPROVED, Reservation=CONFIRMED
+                    </div>
+                </div>
+                <div class="flow-steps">
+                    <div class="flow-step success">
+                        <div class="step-num">1</div>
+                        <div class="step-content"><strong>PG 승인</strong> — TossPayments confirmPayment API 호출 → 성공</div>
+                    </div>
+                    <div class="flow-step success">
+                        <div class="step-num">2</div>
+                        <div class="step-content"><strong>DB 업데이트</strong> — Payment 상태 READY → APPROVED</div>
+                    </div>
+                    <div class="flow-step success">
+                        <div class="step-num">3</div>
+                        <div class="step-content"><strong>예약 확정</strong> — booking-app confirmReservation 호출 → CONFIRMED</div>
+                    </div>
+                </div>
+                <div class="test-mapping">
+                    <div class="test-mapping-header">테스트 매핑</div>
+                    <div class="test-name">confirmPayment_success_fullSagaFlow()</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Scenario 1 -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                시나리오 1: TossPayments PG 승인 실패
+                <span class="badge badge-yellow">보상 불필요</span>
+            </div>
+            <div class="card">
+                <div class="diagram-container">
+                    <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as payment-app
+    participant PG as TossPayments
+    participant B as booking-app
+
+    C->>P: POST /payments/confirm
+    P->>P: 검증 (READY + 금액)
+    P->>PG: confirmPayment()
+    PG--xP: 승인 거절 ✗ (잔액 부족)
+    P->>P: READY → FAILED
+    P-->>C: BusinessException (PAYMENT_PG_ERROR)
+
+    Note over P,B: booking-app 호출 없음<br/>고객 돈 빠져나가지 않음<br/>보상 트랜잭션 불필요
+                    </div>
+                </div>
+                <div class="flow-steps">
+                    <div class="flow-step success">
+                        <div class="step-num">1</div>
+                        <div class="step-content"><strong>검증 통과</strong> — READY 상태 + 금액 일치 확인</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">2</div>
+                        <div class="step-content"><strong>PG 승인 거절</strong> — 카드 잔액 부족, 한도 초과, 카드 정지 등</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">3</div>
+                        <div class="step-content"><strong>상태 전이</strong> — READY → <span class="state-chip state-failed">FAILED</span> (updateToFailed)</div>
+                    </div>
+                </div>
+                <div class="interview-point">
+                    <div class="interview-point-header">💡 포인트</div>
+                    <p>PG 승인 전 실패이므로 고객 돈이 이동하지 않았다. 따라서 별도 보상 트랜잭션 없이도 데이터 정합성이 유지된다. Reservation은 PENDING 유지 → TTL 만료 시 자동 CANCELLED 처리된다.</p>
+                </div>
+                <div class="test-mapping">
+                    <div class="test-mapping-header">테스트 매핑</div>
+                    <div class="test-name">confirmPayment_pgReject_shouldUpdateToFailed()</div>
+                    <div class="test-name">confirmPayment_pgReject_shouldNotReachApproved()</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Scenario 2 -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                시나리오 2: booking-app 확정 실패 → 보상 트랜잭션 → REFUNDED
+                <span class="badge badge-yellow">보상 트랜잭션 발동</span>
+            </div>
+            <div class="card">
+                <div class="diagram-container">
+                    <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as payment-app
+    participant PG as TossPayments
+    participant B as booking-app
+
+    C->>P: POST /payments/confirm
+    P->>PG: confirmPayment()
+    PG-->>P: 승인 성공 ✓
+    P->>P: READY → APPROVED
+    P->>B: confirmReservation()
+    B--xP: 확정 실패 ✗ (만료/네트워크)
+
+    rect rgb(127, 29, 29)
+        Note over P,PG: 보상 트랜잭션 (Compensating Tx)
+        P->>PG: cancelPayment()
+        PG-->>P: 취소 성공 ✓
+        P->>P: APPROVED → REFUNDED
+    end
+
+    P-->>C: BusinessException (RESERVATION_NOT_CONFIRMABLE)
+
+    Note over P,B: 고객 돈 환불 완료<br/>Reservation은 PENDING 유지 → 만료 시 자동 취소
+                    </div>
+                </div>
+                <div class="flow-steps">
+                    <div class="flow-step success">
+                        <div class="step-num">1</div>
+                        <div class="step-content"><strong>PG 승인 성공</strong> — 고객 돈이 PG로 이동됨</div>
+                    </div>
+                    <div class="flow-step success">
+                        <div class="step-num">2</div>
+                        <div class="step-content"><strong>DB APPROVED</strong> — Payment 상태 READY → APPROVED</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">3</div>
+                        <div class="step-content"><strong>booking-app 실패</strong> — 예약 만료(409), 네트워크 오류, 타임아웃 등</div>
+                    </div>
+                    <div class="flow-step compensate">
+                        <div class="step-num">4</div>
+                        <div class="step-content"><strong>보상: PG 취소</strong> — TossPayments cancelPayment 호출 → 환불</div>
+                    </div>
+                    <div class="flow-step compensate">
+                        <div class="step-num">5</div>
+                        <div class="step-content"><strong>DB REFUNDED</strong> — Payment 상태 APPROVED → <span class="state-chip state-refunded">REFUNDED</span></div>
+                    </div>
+                </div>
+                <div class="interview-point">
+                    <div class="interview-point-header">💡 포인트</div>
+                    <p>PG 승인 후 booking-app이 실패하면 "고객 돈이 빠져나간 상태"이므로 반드시 cancelPayment를 호출하여 환불해야 한다. 이것이 Saga 패턴의 <strong>보상 트랜잭션(Compensating Transaction)</strong>이다. catch(Exception e) 블록에서 RuntimeException, BusinessException 모두 포착하여 어떤 종류의 실패든 환불을 보장한다.</p>
+                </div>
+                <div class="test-mapping">
+                    <div class="test-mapping-header">테스트 매핑</div>
+                    <div class="test-name">confirmPayment_bookingFail_shouldInitiateRefundAndTransitionToRefunded()</div>
+                    <div class="test-name">confirmPayment_bookingConflict_shouldStillRefund()</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Scenario 3 -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                시나리오 3: CANCEL_FAILED 진입 + 스케줄러 자동 복구
+                <span class="badge badge-red">최악의 시나리오</span>
+            </div>
+            <div class="card">
+                <div class="diagram-container">
+                    <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as payment-app
+    participant PG as TossPayments
+    participant B as booking-app
+    participant S as Scheduler
+
+    C->>P: POST /payments/confirm
+    P->>PG: confirmPayment()
+    PG-->>P: 승인 성공 ✓
+    P->>P: READY → APPROVED
+    P->>B: confirmReservation()
+    B--xP: 확정 실패 ✗
+
+    rect rgb(127, 29, 29)
+        Note over P,PG: 보상 시도 (실패)
+        P->>PG: cancelPayment()
+        PG--xP: 취소도 실패 ✗ (PG 장애)
+        P->>P: APPROVED → CANCEL_FAILED
+        P->>P: [CRITICAL] 로그 기록
+    end
+
+    P-->>C: BusinessException (PAYMENT_PG_ERROR)
+
+    Note over S: 5분 후...
+
+    rect rgb(6, 95, 70)
+        Note over S,PG: 스케줄러 자동 복구
+        S->>P: readAllByStatus(CANCEL_FAILED)
+        P-->>S: [CANCEL_FAILED 건 목록]
+        S->>PG: cancelPayment() 재시도
+        PG-->>S: 취소 성공 ✓ (PG 복구됨)
+        S->>P: updateToRefunded()
+        P->>P: CANCEL_FAILED → REFUNDED
+    end
+
+    Note over P,S: Eventually Consistent<br/>고객 돈 최종 환불 완료
+                    </div>
+                </div>
+                <div class="flow-steps">
+                    <div class="flow-step success">
+                        <div class="step-num">1</div>
+                        <div class="step-content"><strong>PG 승인 성공</strong> — 고객 돈이 PG로 이동</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">2</div>
+                        <div class="step-content"><strong>booking-app 실패</strong> — 예약 확정 불가</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">3</div>
+                        <div class="step-content"><strong>PG 취소도 실패</strong> — TossPayments API 장애, 네트워크 오류</div>
+                    </div>
+                    <div class="flow-step fail">
+                        <div class="step-num">4</div>
+                        <div class="step-content"><strong>CANCEL_FAILED 진입</strong> — 고객 돈 PG에 묶임, <code>[CRITICAL]</code> 로그 기록</div>
+                    </div>
+                    <div class="flow-step compensate">
+                        <div class="step-num">5</div>
+                        <div class="step-content"><strong>스케줄러 복구</strong> — 5분 간격 PG 취소 재시도 → 성공 시 <span class="state-chip state-refunded">REFUNDED</span></div>
+                    </div>
+                </div>
+                <div class="interview-point">
+                    <div class="interview-point-header">💡 포인트</div>
+                    <p>분산 시스템에서 모든 외부 호출이 실패할 수 있다. CANCEL_FAILED는 "자동 보상이 불가능한 상태"이며, 이를 해결하기 위해 <strong>CancelFailedRetryScheduler</strong>가 주기적으로 PG 취소를 재시도한다. PG 장애가 복구되면 자동으로 REFUNDED 전이가 일어나 <strong>Eventually Consistent</strong> 상태를 달성한다. 실무에서는 AlertManager/PagerDuty와 연동하여 운영팀에도 즉시 알림을 보낸다.</p>
+                </div>
+                <div class="test-mapping">
+                    <div class="test-mapping-header">테스트 매핑 — CANCEL_FAILED 진입</div>
+                    <div class="test-name">confirmPayment_refundAlsoFails_shouldTransitionToCancelFailed()</div>
+                    <div class="test-name">cancelPayment_pgCancelFails_shouldTransitionToCancelFailed()</div>
+                </div>
+                <div class="test-mapping" style="margin-top: 8px;">
+                    <div class="test-mapping-header">테스트 매핑 — 스케줄러 자동 복구</div>
+                    <div class="test-name">retryCancelFailed_noFailedPayments_shouldSkip()</div>
+                    <div class="test-name">retryCancelFailed_pgRetrySuccess_shouldUpdateToRefunded()</div>
+                    <div class="test-name">retryCancelFailed_partialFailure_shouldContinueProcessing()</div>
+                    <div class="test-name">retryCancelFailed_noPaymentKey_shouldSkip()</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Test Coverage Summary -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                전체 테스트 커버리지 요약
+                <span class="badge badge-green">22/22 PASSED</span>
+            </div>
+            <div class="card">
+                <table class="state-table">
+                    <thead>
+                        <tr>
+                            <th>테스트 클래스</th>
+                            <th>카테고리</th>
+                            <th>테스트 수</th>
+                            <th>검증 내용</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="5" style="vertical-align: top; font-family: monospace; font-size: 13px;">PaymentManagerTest</td>
+                            <td>Happy Path</td>
+                            <td>1</td>
+                            <td>PG 승인 → APPROVED → booking 확정 → 정상 완료</td>
+                        </tr>
+                        <tr>
+                            <td>시나리오 1 (PG 실패)</td>
+                            <td>2</td>
+                            <td>READY → FAILED, 보상 미발동, booking 미호출</td>
+                        </tr>
+                        <tr>
+                            <td>시나리오 2 (booking 실패)</td>
+                            <td>2</td>
+                            <td>보상 트랜잭션 → REFUNDED, Exception 종류 무관</td>
+                        </tr>
+                        <tr>
+                            <td>시나리오 3 (CANCEL_FAILED)</td>
+                            <td>2</td>
+                            <td>PG 취소 실패 → CANCEL_FAILED 진입</td>
+                        </tr>
+                        <tr>
+                            <td>상태 전이 규칙</td>
+                            <td>8</td>
+                            <td>도메인 상태 머신 무결성 (허용/금지 전이)</td>
+                        </tr>
+                        <tr>
+                            <td colspan="1" style="font-family: monospace; font-size: 13px;">PaymentManagerTest</td>
+                            <td>결제 요청 생성</td>
+                            <td>3</td>
+                            <td>READY 생성, 비PENDING 거부, 중복 결제 거부</td>
+                        </tr>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 13px;">CancelFailedRetry<br/>SchedulerTest</td>
+                            <td>스케줄러 복구</td>
+                            <td>4</td>
+                            <td>재시도 성공 → REFUNDED, 부분 실패 격리, 빈 목록 스킵</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Architecture Decision -->
+        <!-- ============================================ -->
+        <div class="section">
+            <div class="section-title">
+                아키텍처 결정 기록 (ADR)
+            </div>
+            <div class="card">
+                <table class="state-table">
+                    <thead>
+                        <tr>
+                            <th>결정 사항</th>
+                            <th>선택</th>
+                            <th>근거</th>
+                            <th>대안</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Saga 방식</td>
+                            <td>Orchestration (PaymentManager 중심)</td>
+                            <td>결제 흐름이 선형적, 서비스 2개로 단순</td>
+                            <td>Choreography (Kafka 이벤트) — 서비스 3개 이상 시 고려</td>
+                        </tr>
+                        <tr>
+                            <td>서비스 간 통신</td>
+                            <td>동기 REST</td>
+                            <td>결제는 즉시 결과 필요, 비동기 부적합</td>
+                            <td>Kafka — 알림, 이력 기록 등 비핵심 경로에 적합</td>
+                        </tr>
+                        <tr>
+                            <td>CANCEL_FAILED 복구</td>
+                            <td>스케줄러 (5분 고정 간격)</td>
+                            <td>PG 장애 시 즉시 재시도는 부하만 증가</td>
+                            <td>Exponential Backoff — 건수 소량이므로 과잉 설계</td>
+                        </tr>
+                        <tr>
+                            <td>트랜잭션 경계</td>
+                            <td>외부 호출 간 개별 @Transactional</td>
+                            <td>PG 응답 대기 중 DB 커넥션 점유 방지</td>
+                            <td>단일 @Transactional — DB 커넥션 풀 고갈 위험</td>
+                        </tr>
+                        <tr>
+                            <td>상태 전이 허용 확장</td>
+                            <td>CANCEL_FAILED → REFUNDED 허용</td>
+                            <td>스케줄러 복구 경로에 필요</td>
+                            <td>새 상태(RETRY_PENDING) 추가 — 복잡도 증가</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            MSA 기반 대규모 티켓팅 시스템 — Saga 패턴 보상 트랜잭션 증명 문서<br>
+            Generated: 2026-03-29
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e40af',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#3b82f6',
+                lineColor: '#64748b',
+                secondaryColor: '#065f46',
+                tertiaryColor: '#1e293b',
+                noteBkgColor: '#1e293b',
+                noteTextColor: '#e2e8f0',
+                noteBorderColor: '#475569',
+                actorBkg: '#1e293b',
+                actorBorder: '#3b82f6',
+                actorTextColor: '#e2e8f0',
+                signalColor: '#94a3b8',
+                signalTextColor: '#e2e8f0',
+                labelBoxBkgColor: '#1e293b',
+                labelBoxBorderColor: '#475569',
+                labelTextColor: '#e2e8f0',
+                loopTextColor: '#e2e8f0',
+                activationBorderColor: '#3b82f6',
+                activationBkgColor: '#1e3a5f',
+                sequenceNumberColor: '#1e293b'
+            },
+            sequence: {
+                diagramMarginX: 16,
+                diagramMarginY: 16,
+                actorMargin: 80,
+                width: 180,
+                height: 50,
+                boxMargin: 8,
+                boxTextMargin: 6,
+                noteMargin: 12,
+                messageMargin: 40,
+                mirrorActors: false,
+                useMaxWidth: true
+            }
+        });
+    </script>
+</body>
+</html>

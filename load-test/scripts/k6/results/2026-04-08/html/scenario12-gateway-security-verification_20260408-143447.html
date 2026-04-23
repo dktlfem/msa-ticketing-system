@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG 보안 검증 — 시나리오 12</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; color: #374151; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #22c55e; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; font-weight: 600; } .fail { color: #dc2626; font-weight: 600; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 10px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol { margin: 6px 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 8px; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .obs  { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin: 10px 0; font-size: 0.88rem; line-height: 1.7; }
+  .obs strong { color: #92400e; }
+  .obs code { background: #fef3c7; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 0.82rem; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+  .card-val { font-size: 1.6rem; font-weight: 700; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>SCG Gateway 보안 검증 — 시나리오 12 <span class="badge">PASS</span></h1>
+<p style="color:#6b7280;font-size:0.85rem;">2026-04-08T05:34:47.194Z | http://192.168.124.100:8090</p>
+
+<h2>검증 항목 요약</h2>
+<div class="grid">
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">인증 성공 P95 (baseline)</div>
+    <div class="card-val" style="color:#374151">26ms</div>
+    <div style="font-size:0.8rem;">기준 측정값 (합격선 아님)</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">위조 헤더 Bypass</div>
+    <div class="card-val" style="color:#16a34a">0</div>
+    <div style="font-size:0.8rem;">목표 = 0 ✓</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">X-Request-Id 매칭</div>
+    <div class="card-val" style="color:#16a34a">100.0%</div>
+    <div style="font-size:0.8rem;">목표 = 100% ✓</div>
+  </div>
+</div>
+
+<h2>상세 결과</h2>
+<table>
+  <tr><th>검증 항목</th><th>측정값</th><th>목표</th><th>판정</th><th>검증 내용</th></tr>
+  <tr>
+    <td>[1] 인증 성공 응답시간 (baseline)</td>
+    <td class="num">P50: 0.0ms / P95: 25.9ms</td>
+    <td>기준 측정값</td>
+    <td style="color:#6b7280">BASELINE</td>
+    <td>유효 JWT → /api/v1/events (개선 전후 비교용)</td>
+  </tr>
+  <tr>
+    <td>[2] 만료 JWT → 401</td>
+    <td class="num">100.0%</td>
+    <td>= 100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td>exp 음수 JWT → 401 ProblemDetail</td>
+  </tr>
+  <tr>
+    <td>[3] JWT 없음 → 401</td>
+    <td class="num">100.0%</td>
+    <td>= 100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td>Authorization 헤더 없음 → 401</td>
+  </tr>
+  <tr>
+    <td>[4] Spoofed Header 차단</td>
+    <td class="num">Bypass: 0건 / 차단율: 100.0%</td>
+    <td>Bypass=0, 차단=100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td><code>Auth-User-Id: 999</code> + JWT 없음 → 401 (SanitizeFilter 동작 확인)</td>
+  </tr>
+  <tr>
+    <td>[5] Queue-Token 없음 → 403</td>
+    <td class="num">100.0%</td>
+    <td>= 100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td>POST /api/v1/reservations/** + Queue-Token 없음 → 403</td>
+  </tr>
+  <tr>
+    <td>[6] X-Request-Id Propagation</td>
+    <td class="num">100.0%</td>
+    <td>= 100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td>요청 X-Request-Id = 응답 X-Request-Id</td>
+  </tr>
+  <tr>
+    <td>에러 응답 형식 일관성</td>
+    <td class="num">100.0%</td>
+    <td>= 100%</td>
+    <td><span class="pass">PASS</span></td>
+    <td>4xx 응답이 RFC 7807 ProblemDetail JSON (status + title 필드)</td>
+  </tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>sv_request_id_match: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_auth_missing_correct: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_spoofed_blocked: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_spoofed_bypass: count==0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_auth_success_rate: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_problemdetail_rate: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_queue_block_rate: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>sv_auth_expired_correct: rate>=1.0</td><td><span class="pass">PASS</span></td></tr>
+</table>
+
+<h2>분석</h2>
+<div class="note">bypass = 0: Auth-User-Id/Auth-Passport 위조 헤더가 RequestSanitizeFilter(+3)에 의해 100% 차단됨</div>
+<div class="note">인증 성공 baseline P95 = 25.9ms, P50 = 0.0ms (합격선 아닌 기준 측정값)</div>
+<div class="note">X-Request-Id propagation = 100.0%: 모든 요청에서 응답 헤더에 동일 값 반환 확인</div>
+<div class="note">ProblemDetail 일관성 = 100.0%: 4xx 오류 응답이 RFC 7807 형식 준수</div>
+
+<h2>Observability 수집 가이드</h2>
+<div class="obs">
+  <strong>테스트 완료 후 아래 쿼리로 각 도구에서 결과를 직접 확인할 것</strong><br/><br/>
+  <strong>Jaeger:</strong> <code>http://192.168.124.100:8080/jaeger/search?service=scg-app</code><br/>
+  → Service: scg-app, Tags: <code>requestId={X-Request-Id 값}</code> 입력 → 트레이스 클릭 → scg-app → 하위 서비스 전파 확인<br/><br/>
+  <strong>Kibana:</strong> Discover → index: <code>filebeat-*</code> → KQL: <code>requestId: "{X-Request-Id 값}"</code><br/>
+  → auth_expired/spoofed_header 시나리오 시간대에 WARN 레벨 [SANITIZE] Stripped 로그 존재 여부 확인<br/><br/>
+  <strong>Elasticsearch:</strong>
+  <code>GET /filebeat-*/_search?q=log.level:WARN AND message:[SANITIZE]&size=20</code><br/>
+  → RequestSanitizeFilter가 위조 헤더를 실제로 strip한 로그 확인<br/><br/>
+  <strong>Grafana:</strong> SCG 대시보드 → 테스트 시간대 선택<br/>
+  → Panel: HTTP Status Code Distribution → 401/403 spike 확인<br/>
+  → Panel: Request Rate → 시나리오별 트래픽 패턴 확인<br/><br/>
+  <strong>Prometheus PromQL:</strong><br/>
+  <code>sum(increase(http_server_requests_seconds_count{status="401"}[5m])) by (uri)</code> — 인증 실패 경로 분포<br/>
+  <code>sum(increase(http_server_requests_seconds_count{uri=~".*/reservations.*", status="403"}[5m]))</code> — Queue Token 차단 수
+</div>
+
+<p class="meta">Generated by k6 scenario12-gateway-security-verification.js | 2026-04-08T05:34:47.194Z | run_id: 20260408-143447</p>
+</body>
+</html>
