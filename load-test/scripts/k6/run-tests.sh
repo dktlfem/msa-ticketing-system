@@ -103,15 +103,22 @@ run_scenario() {
     done
   fi
 
-  local start_ts
+  local start_ts run_tag log_file
   start_ts=$(date +%s)
+  run_tag=$(date +%Y%m%d-%H%M%S)
+  log_file="${RESULT_DIR}/logs/${testid}_${run_tag}.log"
+  mkdir -p "${RESULT_DIR}/logs"
+
+  log_info "run_id: ${run_tag}  log: ${log_file}"
 
   k6 run \
     --tag testid="${testid}" \
     --tag run_date="${RUN_DATE}" \
+    --tag run_id="${run_tag}" \
+    --out "json=${RESULT_DIR}/json/${testid}_${run_tag}_raw.json.gz" \
     "${env_args[@]}" \
     ${INFLUX_OUT:-} \
-    "${SCENARIO_DIR}/${script}" || {
+    "${SCENARIO_DIR}/${script}" 2>&1 | tee "${log_file}" || {
       log_err "${testid} 실행 실패 (exit code: $?)"
       return 1
     }
@@ -119,7 +126,7 @@ run_scenario() {
   local end_ts elapsed
   end_ts=$(date +%s)
   elapsed=$((end_ts - start_ts))
-  log_ok "${testid} 완료 (${elapsed}초)"
+  log_ok "${testid} 완료 (${elapsed}초)  run_id=${run_tag}"
   echo ""
 }
 
@@ -217,6 +224,51 @@ run_s11() {
   run_scenario "scenario11-saga-compensation.js" "scenario11-saga-compensation" "$1" "$2"
 }
 
+run_s12() {
+  log_info "scenario12: Gateway 보안 검증 (인증/헤더/Queue Token/Request-Id)"
+  run_scenario "scenario12-gateway-security-verification.js" "scenario12-gateway-security-verification" "$1" "$2"
+}
+
+run_s13() {
+  echo -e "${YELLOW}[주의] scenario13은 테스트 전 수동 작업이 필요합니다.${NC}"
+  echo ""
+  echo "  [A] timeout 유발: docker compose exec waitingroom-app tc qdisc add dev eth0 root netem delay 12000ms"
+  echo "  [B] CB 유발:      docker compose stop waitingroom-app"
+  echo "  선택한 방법으로 장애 유발 후 Enter를 누르세요."
+  echo ""
+  read -rp "  준비 완료 후 Enter를 누르세요... "
+  run_scenario "scenario13-gateway-resilience.js" "scenario13-gateway-resilience" "$1" "$2" \
+    "RESILIENCE_MODE=${RESILIENCE_MODE:-both}"
+  echo ""
+  echo -e "${YELLOW}[복구] 테스트 완료. 서비스를 복구하세요:${NC}"
+  echo "  tc 복구: docker compose exec waitingroom-app tc qdisc del dev eth0 root"
+  echo "  서비스 시작: docker compose start waitingroom-app"
+}
+
+run_s14() {
+  local contention_vus="${CONTENTION_VUS:-20}"
+  local target_seat_id="${TARGET_SEAT_ID:-11}"
+  local target_event_id="${TARGET_EVENT_ID:-1}"
+  log_info "scenario14: 좌석/예약 정합성 검증 (CONTENTION_VUS=${contention_vus}, SEAT=${target_seat_id})"
+  echo ""
+  echo -e "${YELLOW}[사전 준비] 아래 SQL을 먼저 실행하세요:${NC}"
+  echo "  load-test/scripts/k6/scenarios/SQL_INIT_s14.sql"
+  echo "  (TARGET_SEAT_ID=${target_seat_id}, CONTENTION_VUS=${contention_vus}, TARGET_EVENT_ID=${target_event_id} 치환 필요)"
+  echo ""
+  read -rp "  SQL_INIT 실행 완료 후 Enter를 누르세요... "
+  run_scenario "scenario14-seat-consistency.js" "scenario14-seat-consistency" "$1" "$2" \
+    "CONTENTION_VUS=${contention_vus}" \
+    "TARGET_SEAT_ID=${target_seat_id}" \
+    "TARGET_EVENT_ID=${target_event_id}"
+  echo ""
+  echo -e "${YELLOW}[테스트 후] 불변식 검증 SQL을 실행하세요:${NC}"
+  echo "  load-test/scripts/k6/scenarios/SQL_VERIFY_s14.sql"
+  echo "  (TARGET_SEAT_ID=${target_seat_id} 치환 필요)"
+  echo ""
+  echo -e "${CYAN}[정리] 다음 실행을 위한 정리 SQL (검증 후):${NC}"
+  echo "  load-test/scripts/k6/scenarios/SQL_CLEANUP_s14.sql"
+}
+
 # ── 메인 ────────────────────────────────────────────────────
 
 echo ""
@@ -297,7 +349,7 @@ case "${MODE}" in
     run_and_track run_s6 7 $TOTAL
     ;;
 
-  [1-9]|10|11)
+  [1-9]|10|11|14)
     log_info "단일 시나리오 실행: scenario${MODE}"
     TOTAL=1
     run_and_track "run_s${MODE}" 1 $TOTAL
@@ -312,14 +364,45 @@ case "${MODE}" in
     run_and_track run_s11 4 $TOTAL
     ;;
 
+  consistency)
+    log_info "정합성/멱등성/복구 검증 시나리오 (14→15→16)"
+    log_warn "scenario14는 SQL_INIT 사전 준비 필요"
+    TOTAL=1
+    run_and_track run_s14 1 $TOTAL
+    ;;
+
+  security)
+    log_info "SCG 보안 검증 시나리오 실행: 12 (자동) + 13 (수동)"
+    log_warn "scenario13은 서비스 장애 유발 준비 필요"
+    TOTAL=2
+    run_and_track run_s12 1 $TOTAL
+    run_and_track run_s13 2 $TOTAL
+    ;;
+
+  12)
+    log_info "단일 시나리오 실행: scenario12"
+    TOTAL=1
+    run_and_track run_s12 1 $TOTAL
+    ;;
+
+  13)
+    log_info "단일 시나리오 실행: scenario13 (수동 준비 필요)"
+    TOTAL=1
+    run_and_track run_s13 1 $TOTAL
+    ;;
+
   *)
     echo "사용법: $0 [auto|manual|soak|all|1-7]"
     echo ""
-    echo "  auto    수동 개입 불필요 시나리오 (1, 4, 5, 7)  [기본값]"
-    echo "  manual  수동 개입 필요 시나리오 (2, 3)"
-    echo "  soak    장시간 안정성 테스트 (6)"
-    echo "  all     전체 시나리오 순차 실행"
-    echo "  1-7     개별 시나리오 실행"
+    echo "  auto      수동 개입 불필요 시나리오 (1, 4, 5, 7)  [기본값]"
+    echo "  manual    수동 개입 필요 시나리오 (2, 3)"
+    echo "  soak      장시간 안정성 테스트 (6)"
+    echo "  all       전체 시나리오 순차 실행"
+    echo "  domain       핵심 도메인 시나리오 (8→9→10→11)
+  consistency  정합성/멱등성/복구 검증 (14, SQL 사전 준비 필요)
+  14           좌석/예약 정합성 (SQL_INIT → k6 → SQL_VERIFY 순서)"
+    echo "  security  SCG 보안 검증 (12 자동 + 13 수동)"
+    echo "  1-13      개별 시나리오 실행"
     echo ""
     echo "환경 변수:"
     echo "  SCG_BASE_URL      SCG 주소 (기본: http://192.168.124.100:8090)"
@@ -329,10 +412,11 @@ case "${MODE}" in
     echo "  RESULT_DIR        결과 저장 경로 (기본: results/YYYY-MM-DD)"
     echo ""
     echo "예시:"
-    echo "  ./run-tests.sh auto                    자동 시나리오만"
-    echo "  ./run-tests.sh all                     전체 실행"
-    echo "  ./run-tests.sh 1                       scenario1만"
-    echo "  SOAK_DURATION=30m ./run-tests.sh soak  30분 soak"
+    echo "  ./run-tests.sh auto                         자동 시나리오만"
+    echo "  ./run-tests.sh all                          전체 실행"
+    echo "  ./run-tests.sh 1                            scenario1만"
+    echo "  SOAK_DURATION=30m ./run-tests.sh soak       30분 soak"
+    echo "  TARGET_SEAT_ID=11 ./run-tests.sh 14         좌석 정합성 (seatId=11)"
     exit 0
     ;;
 esac

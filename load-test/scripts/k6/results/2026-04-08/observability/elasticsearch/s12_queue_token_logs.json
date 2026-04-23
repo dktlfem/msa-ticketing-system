@@ -1,0 +1,139 @@
+{
+    "took": 15,
+    "timed_out": false,
+    "_shards": {
+        "total": 2,
+        "successful": 2,
+        "skipped": 1,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 151,
+            "relation": "eq"
+        },
+        "max_score": null,
+        "hits": [
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "hF1Ga50BN2XdEt1NnsPg",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:52.622Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:52.622903005Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"c52d04815709be259035c1bd980f0429\",\"spanId\":\"4a2986c8d218c1be\",\"trace_id\":\"c52d04815709be259035c1bd980f0429\",\"trace_flags\":\"01\",\"span_id\":\"4a2986c8d218c1be\",\"requestId\":\"1440848e-852a-42a6-a76d-b3858935c0e8\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621272622
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "UF1Ga50BN2XdEt1NnsPg",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:52.424Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:52.424883899Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-3\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"879ad5d11dad067d5a6b9bdd52fb33f3\",\"spanId\":\"94b83787fa7fcea0\",\"trace_id\":\"879ad5d11dad067d5a6b9bdd52fb33f3\",\"trace_flags\":\"01\",\"span_id\":\"94b83787fa7fcea0\",\"requestId\":\"5705fbf6-d9de-4ad5-9320-20fedc268651\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621272424
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "Gl1Ga50BN2XdEt1Nd8PV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:52.226Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:52.226016549Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"f6a61c43fbf766ac83442447142aeb0f\",\"spanId\":\"6e151ec0fffcedad\",\"trace_id\":\"f6a61c43fbf766ac83442447142aeb0f\",\"trace_flags\":\"01\",\"span_id\":\"6e151ec0fffcedad\",\"requestId\":\"c3fc95c2-b6fb-469d-b8ef-e037beed4b7b\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621272226
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "6F1Ga50BN2XdEt1Nd8LV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:52.031Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:52.030866094Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"60693833e3a71e0fdc12baa566ef4de3\",\"spanId\":\"a3afb9f2f7cbef0e\",\"trace_id\":\"60693833e3a71e0fdc12baa566ef4de3\",\"trace_flags\":\"01\",\"span_id\":\"a3afb9f2f7cbef0e\",\"requestId\":\"58711d6e-9540-4f6c-bf7d-19f9de4c0132\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621272031
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "t11Ga50BN2XdEt1Nd8LV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:51.829Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:51.829138708Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-3\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"d7d010a7dbfdcc08fd3ebe78205b1937\",\"spanId\":\"5bf4718993215667\",\"trace_id\":\"d7d010a7dbfdcc08fd3ebe78205b1937\",\"trace_flags\":\"01\",\"span_id\":\"5bf4718993215667\",\"requestId\":\"9e5bd633-1246-4107-85db-bfb16fd2dac0\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621271829
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "hV1Ga50BN2XdEt1Nd8LV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:51.632Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:51.631491574Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"8a79e1c351028541a9768e725ff7b924\",\"spanId\":\"8e96d4517525897f\",\"trace_id\":\"8a79e1c351028541a9768e725ff7b924\",\"trace_flags\":\"01\",\"span_id\":\"8e96d4517525897f\",\"requestId\":\"9b963fbe-6c1b-4702-a361-7e0fe0ab3307\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621271632
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "J11Ga50BN2XdEt1Nd8LV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:51.433Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:51.433570573Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"ccfad85a667b4f8b63166327413bc45c\",\"spanId\":\"b191dfc9a38506b5\",\"trace_id\":\"ccfad85a667b4f8b63166327413bc45c\",\"trace_flags\":\"01\",\"span_id\":\"b191dfc9a38506b5\",\"requestId\":\"2e1d6c69-4242-41b9-87d3-c6362506427a\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621271433
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "7l1Ga50BN2XdEt1Nd8HV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:51.234Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:51.234577231Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-3\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"cec4696cbaaccb730b5f200c99c5117d\",\"spanId\":\"fabc925340d429ac\",\"trace_id\":\"cec4696cbaaccb730b5f200c99c5117d\",\"trace_flags\":\"01\",\"span_id\":\"fabc925340d429ac\",\"requestId\":\"e2a226fc-e4ac-462b-92d4-2888a668c552\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621271234
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "vV1Ga50BN2XdEt1Nd8HV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:51.033Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:51.033017866Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"ecf9752e1fc6c4feadb8bc2dab3e6e42\",\"spanId\":\"9d346bc7cc39e6f1\",\"trace_id\":\"ecf9752e1fc6c4feadb8bc2dab3e6e42\",\"trace_flags\":\"01\",\"span_id\":\"9d346bc7cc39e6f1\",\"requestId\":\"0bb0a00a-497d-409e-afeb-a3748f503b0c\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621271033
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "h11Ga50BN2XdEt1Nd8HV",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:07:50.832Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:07:50.831884035Z\",\"@version\":\"1\",\"message\":\"[QUEUE_TOKEN] Missing header path=/api/v1/reservations method=POST clientIp=172.19.0.1\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.QueueTokenValidationFilter\",\"thread_name\":\"reactor-http-epoll-4\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"a5953de461abb448e2c0568f29de73d4\",\"spanId\":\"b4572dcd78fa2d3c\",\"trace_id\":\"a5953de461abb448e2c0568f29de73d4\",\"trace_flags\":\"01\",\"span_id\":\"b4572dcd78fa2d3c\",\"requestId\":\"64e27028-1704-413a-be9d-da0c0efd8d7a\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775621270832
+                ]
+            }
+        ]
+    }
+}

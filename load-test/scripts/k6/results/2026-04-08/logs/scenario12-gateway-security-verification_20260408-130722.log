@@ -1,0 +1,278 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: /Users/koes_c/projects/ci-cd-test/load-test/scripts/k6/scenarios/scenario12-gateway-security-verification.js
+        output: json (results/2026-04-08/json/scenario12-gateway-security-verification_20260408-130722_raw.json.gz), InfluxDBv1 (http://192.168.124.100:8086)
+
+     scenarios: (100.00%) 6 scenarios, 57 max VUs, 1m0s max duration (incl. graceful stop):
+              * auth_expired: 5.00 iterations/s for 30s (maxVUs: 3-8, exec: authExpiredScenario, gracefulStop: 30s)
+              * auth_no_token: 5.00 iterations/s for 30s (maxVUs: 3-8, exec: authNoTokenScenario, gracefulStop: 30s)
+              * auth_success: 10.00 iterations/s for 30s (maxVUs: 5-15, exec: authSuccessScenario, gracefulStop: 30s)
+              * queue_token: 5.00 iterations/s for 30s (maxVUs: 3-8, exec: queueTokenScenario, gracefulStop: 30s)
+              * request_id: 5.00 iterations/s for 30s (maxVUs: 3-8, exec: requestIdScenario, gracefulStop: 30s)
+              * spoofed_header: 10.00 iterations/s for 30s (maxVUs: 5-10, exec: spoofedHeaderScenario, gracefulStop: 30s)
+
+time="2026-04-08T13:07:22+09:00" level=info msg="[setup] SCG health: status=200" source=console
+
+running (0m01.0s), 00/22 VUs, 40 complete and 0 interrupted iterations
+auth_expired     [   3% ] 0/3 VUs    01.0s/30s  5.00 iters/s
+auth_no_token    [   3% ] 0/3 VUs    01.0s/30s  5.00 iters/s
+auth_success     [   3% ] 00/05 VUs  01.0s/30s  10.00 iters/s
+queue_token      [   3% ] 0/3 VUs    01.0s/30s  5.00 iters/s
+request_id       [   3% ] 0/3 VUs    01.0s/30s  5.00 iters/s
+spoofed_header   [   3% ] 00/05 VUs  01.0s/30s  10.00 iters/s
+
+running (0m02.0s), 00/22 VUs, 80 complete and 0 interrupted iterations
+auth_expired     [   7% ] 0/3 VUs    02.0s/30s  5.00 iters/s
+auth_no_token    [   7% ] 0/3 VUs    02.0s/30s  5.00 iters/s
+auth_success     [   7% ] 00/05 VUs  02.0s/30s  10.00 iters/s
+queue_token      [   7% ] 0/3 VUs    02.0s/30s  5.00 iters/s
+request_id       [   7% ] 0/3 VUs    02.0s/30s  5.00 iters/s
+spoofed_header   [   7% ] 00/05 VUs  02.0s/30s  10.00 iters/s
+
+running (0m03.0s), 00/22 VUs, 120 complete and 0 interrupted iterations
+auth_expired     [  10% ] 0/3 VUs    03.0s/30s  5.00 iters/s
+auth_no_token    [  10% ] 0/3 VUs    03.0s/30s  5.00 iters/s
+auth_success     [  10% ] 00/05 VUs  03.0s/30s  10.00 iters/s
+queue_token      [  10% ] 0/3 VUs    03.0s/30s  5.00 iters/s
+request_id       [  10% ] 0/3 VUs    03.0s/30s  5.00 iters/s
+spoofed_header   [  10% ] 00/05 VUs  03.0s/30s  10.00 iters/s
+
+running (0m04.0s), 00/22 VUs, 160 complete and 0 interrupted iterations
+auth_expired     [  13% ] 0/3 VUs    04.0s/30s  5.00 iters/s
+auth_no_token    [  13% ] 0/3 VUs    04.0s/30s  5.00 iters/s
+auth_success     [  13% ] 00/05 VUs  04.0s/30s  10.00 iters/s
+queue_token      [  13% ] 0/3 VUs    04.0s/30s  5.00 iters/s
+request_id       [  13% ] 0/3 VUs    04.0s/30s  5.00 iters/s
+spoofed_header   [  13% ] 00/05 VUs  04.0s/30s  10.00 iters/s
+
+running (0m05.0s), 00/22 VUs, 200 complete and 0 interrupted iterations
+auth_expired     [  17% ] 0/3 VUs    05.0s/30s  5.00 iters/s
+auth_no_token    [  17% ] 0/3 VUs    05.0s/30s  5.00 iters/s
+auth_success     [  17% ] 00/05 VUs  05.0s/30s  10.00 iters/s
+queue_token      [  17% ] 0/3 VUs    05.0s/30s  5.00 iters/s
+request_id       [  17% ] 0/3 VUs    05.0s/30s  5.00 iters/s
+spoofed_header   [  17% ] 00/05 VUs  05.0s/30s  10.00 iters/s
+
+running (0m06.0s), 00/22 VUs, 240 complete and 0 interrupted iterations
+auth_expired     [  20% ] 0/3 VUs    06.0s/30s  5.00 iters/s
+auth_no_token    [  20% ] 0/3 VUs    06.0s/30s  5.00 iters/s
+auth_success     [  20% ] 00/05 VUs  06.0s/30s  10.00 iters/s
+queue_token      [  20% ] 0/3 VUs    06.0s/30s  5.00 iters/s
+request_id       [  20% ] 0/3 VUs    06.0s/30s  5.00 iters/s
+spoofed_header   [  20% ] 00/05 VUs  06.0s/30s  10.00 iters/s
+
+running (0m07.0s), 00/22 VUs, 280 complete and 0 interrupted iterations
+auth_expired     [  23% ] 0/3 VUs    07.0s/30s  5.00 iters/s
+auth_no_token    [  23% ] 0/3 VUs    07.0s/30s  5.00 iters/s
+auth_success     [  23% ] 00/05 VUs  07.0s/30s  10.00 iters/s
+queue_token      [  23% ] 0/3 VUs    07.0s/30s  5.00 iters/s
+request_id       [  23% ] 0/3 VUs    07.0s/30s  5.00 iters/s
+spoofed_header   [  23% ] 00/05 VUs  07.0s/30s  10.00 iters/s
+
+running (0m08.0s), 00/22 VUs, 320 complete and 0 interrupted iterations
+auth_expired     [  27% ] 0/3 VUs    08.0s/30s  5.00 iters/s
+auth_no_token    [  27% ] 0/3 VUs    08.0s/30s  5.00 iters/s
+auth_success     [  27% ] 00/05 VUs  08.0s/30s  10.00 iters/s
+queue_token      [  27% ] 0/3 VUs    08.0s/30s  5.00 iters/s
+request_id       [  27% ] 0/3 VUs    08.0s/30s  5.00 iters/s
+spoofed_header   [  27% ] 00/05 VUs  08.0s/30s  10.00 iters/s
+
+running (0m09.0s), 00/22 VUs, 360 complete and 0 interrupted iterations
+auth_expired     [  30% ] 0/3 VUs    09.0s/30s  5.00 iters/s
+auth_no_token    [  30% ] 0/3 VUs    09.0s/30s  5.00 iters/s
+auth_success     [  30% ] 00/05 VUs  09.0s/30s  10.00 iters/s
+queue_token      [  30% ] 0/3 VUs    09.0s/30s  5.00 iters/s
+request_id       [  30% ] 0/3 VUs    09.0s/30s  5.00 iters/s
+spoofed_header   [  30% ] 00/05 VUs  09.0s/30s  10.00 iters/s
+
+running (0m10.0s), 00/22 VUs, 400 complete and 0 interrupted iterations
+auth_expired     [  33% ] 0/3 VUs    10.0s/30s  5.00 iters/s
+auth_no_token    [  33% ] 0/3 VUs    10.0s/30s  5.00 iters/s
+auth_success     [  33% ] 00/05 VUs  10.0s/30s  10.00 iters/s
+queue_token      [  33% ] 0/3 VUs    10.0s/30s  5.00 iters/s
+request_id       [  33% ] 0/3 VUs    10.0s/30s  5.00 iters/s
+spoofed_header   [  33% ] 00/05 VUs  10.0s/30s  10.00 iters/s
+
+running (0m11.0s), 00/22 VUs, 440 complete and 0 interrupted iterations
+auth_expired     [  37% ] 0/3 VUs    11.0s/30s  5.00 iters/s
+auth_no_token    [  37% ] 0/3 VUs    11.0s/30s  5.00 iters/s
+auth_success     [  37% ] 00/05 VUs  11.0s/30s  10.00 iters/s
+queue_token      [  37% ] 0/3 VUs    11.0s/30s  5.00 iters/s
+request_id       [  37% ] 0/3 VUs    11.0s/30s  5.00 iters/s
+spoofed_header   [  37% ] 00/05 VUs  11.0s/30s  10.00 iters/s
+
+running (0m12.0s), 00/22 VUs, 480 complete and 0 interrupted iterations
+auth_expired     [  40% ] 0/3 VUs    12.0s/30s  5.00 iters/s
+auth_no_token    [  40% ] 0/3 VUs    12.0s/30s  5.00 iters/s
+auth_success     [  40% ] 00/05 VUs  12.0s/30s  10.00 iters/s
+queue_token      [  40% ] 0/3 VUs    12.0s/30s  5.00 iters/s
+request_id       [  40% ] 0/3 VUs    12.0s/30s  5.00 iters/s
+spoofed_header   [  40% ] 00/05 VUs  12.0s/30s  10.00 iters/s
+
+running (0m13.0s), 00/22 VUs, 520 complete and 0 interrupted iterations
+auth_expired     [  43% ] 0/3 VUs    13.0s/30s  5.00 iters/s
+auth_no_token    [  43% ] 0/3 VUs    13.0s/30s  5.00 iters/s
+auth_success     [  43% ] 00/05 VUs  13.0s/30s  10.00 iters/s
+queue_token      [  43% ] 0/3 VUs    13.0s/30s  5.00 iters/s
+request_id       [  43% ] 0/3 VUs    13.0s/30s  5.00 iters/s
+spoofed_header   [  43% ] 00/05 VUs  13.0s/30s  10.00 iters/s
+
+running (0m14.0s), 00/22 VUs, 560 complete and 0 interrupted iterations
+auth_expired     [  47% ] 0/3 VUs    14.0s/30s  5.00 iters/s
+auth_no_token    [  47% ] 0/3 VUs    14.0s/30s  5.00 iters/s
+auth_success     [  47% ] 00/05 VUs  14.0s/30s  10.00 iters/s
+queue_token      [  47% ] 0/3 VUs    14.0s/30s  5.00 iters/s
+request_id       [  47% ] 0/3 VUs    14.0s/30s  5.00 iters/s
+spoofed_header   [  47% ] 00/05 VUs  14.0s/30s  10.00 iters/s
+
+running (0m15.0s), 00/22 VUs, 600 complete and 0 interrupted iterations
+auth_expired     [  50% ] 0/3 VUs    15.0s/30s  5.00 iters/s
+auth_no_token    [  50% ] 0/3 VUs    15.0s/30s  5.00 iters/s
+auth_success     [  50% ] 00/05 VUs  15.0s/30s  10.00 iters/s
+queue_token      [  50% ] 0/3 VUs    15.0s/30s  5.00 iters/s
+request_id       [  50% ] 0/3 VUs    15.0s/30s  5.00 iters/s
+spoofed_header   [  50% ] 00/05 VUs  15.0s/30s  10.00 iters/s
+
+running (0m16.0s), 00/22 VUs, 640 complete and 0 interrupted iterations
+auth_expired     [  53% ] 0/3 VUs    16.0s/30s  5.00 iters/s
+auth_no_token    [  53% ] 0/3 VUs    16.0s/30s  5.00 iters/s
+auth_success     [  53% ] 00/05 VUs  16.0s/30s  10.00 iters/s
+queue_token      [  53% ] 0/3 VUs    16.0s/30s  5.00 iters/s
+request_id       [  53% ] 0/3 VUs    16.0s/30s  5.00 iters/s
+spoofed_header   [  53% ] 00/05 VUs  16.0s/30s  10.00 iters/s
+
+running (0m17.0s), 00/22 VUs, 680 complete and 0 interrupted iterations
+auth_expired     [  57% ] 0/3 VUs    17.0s/30s  5.00 iters/s
+auth_no_token    [  57% ] 0/3 VUs    17.0s/30s  5.00 iters/s
+auth_success     [  57% ] 00/05 VUs  17.0s/30s  10.00 iters/s
+queue_token      [  57% ] 0/3 VUs    17.0s/30s  5.00 iters/s
+request_id       [  57% ] 0/3 VUs    17.0s/30s  5.00 iters/s
+spoofed_header   [  57% ] 00/05 VUs  17.0s/30s  10.00 iters/s
+
+running (0m18.0s), 00/22 VUs, 720 complete and 0 interrupted iterations
+auth_expired     [  60% ] 0/3 VUs    18.0s/30s  5.00 iters/s
+auth_no_token    [  60% ] 0/3 VUs    18.0s/30s  5.00 iters/s
+auth_success     [  60% ] 00/05 VUs  18.0s/30s  10.00 iters/s
+queue_token      [  60% ] 0/3 VUs    18.0s/30s  5.00 iters/s
+request_id       [  60% ] 0/3 VUs    18.0s/30s  5.00 iters/s
+spoofed_header   [  60% ] 00/05 VUs  18.0s/30s  10.00 iters/s
+
+running (0m19.0s), 00/22 VUs, 760 complete and 0 interrupted iterations
+auth_expired     [  63% ] 0/3 VUs    19.0s/30s  5.00 iters/s
+auth_no_token    [  63% ] 0/3 VUs    19.0s/30s  5.00 iters/s
+auth_success     [  63% ] 00/05 VUs  19.0s/30s  10.00 iters/s
+queue_token      [  63% ] 0/3 VUs    19.0s/30s  5.00 iters/s
+request_id       [  63% ] 0/3 VUs    19.0s/30s  5.00 iters/s
+spoofed_header   [  63% ] 00/05 VUs  19.0s/30s  10.00 iters/s
+
+running (0m20.0s), 00/22 VUs, 800 complete and 0 interrupted iterations
+auth_expired     [  67% ] 0/3 VUs    20.0s/30s  5.00 iters/s
+auth_no_token    [  67% ] 0/3 VUs    20.0s/30s  5.00 iters/s
+auth_success     [  67% ] 00/05 VUs  20.0s/30s  10.00 iters/s
+queue_token      [  67% ] 0/3 VUs    20.0s/30s  5.00 iters/s
+request_id       [  67% ] 0/3 VUs    20.0s/30s  5.00 iters/s
+spoofed_header   [  67% ] 00/05 VUs  20.0s/30s  10.00 iters/s
+
+running (0m21.0s), 00/22 VUs, 840 complete and 0 interrupted iterations
+auth_expired     [  70% ] 0/3 VUs    21.0s/30s  5.00 iters/s
+auth_no_token    [  70% ] 0/3 VUs    21.0s/30s  5.00 iters/s
+auth_success     [  70% ] 00/05 VUs  21.0s/30s  10.00 iters/s
+queue_token      [  70% ] 0/3 VUs    21.0s/30s  5.00 iters/s
+request_id       [  70% ] 0/3 VUs    21.0s/30s  5.00 iters/s
+spoofed_header   [  70% ] 00/05 VUs  21.0s/30s  10.00 iters/s
+
+running (0m22.0s), 00/22 VUs, 880 complete and 0 interrupted iterations
+auth_expired     [  73% ] 0/3 VUs    22.0s/30s  5.00 iters/s
+auth_no_token    [  73% ] 0/3 VUs    22.0s/30s  5.00 iters/s
+auth_success     [  73% ] 00/05 VUs  22.0s/30s  10.00 iters/s
+queue_token      [  73% ] 0/3 VUs    22.0s/30s  5.00 iters/s
+request_id       [  73% ] 0/3 VUs    22.0s/30s  5.00 iters/s
+spoofed_header   [  73% ] 00/05 VUs  22.0s/30s  10.00 iters/s
+
+running (0m23.0s), 00/22 VUs, 920 complete and 0 interrupted iterations
+auth_expired     [  77% ] 0/3 VUs    23.0s/30s  5.00 iters/s
+auth_no_token    [  77% ] 0/3 VUs    23.0s/30s  5.00 iters/s
+auth_success     [  77% ] 00/05 VUs  23.0s/30s  10.00 iters/s
+queue_token      [  77% ] 0/3 VUs    23.0s/30s  5.00 iters/s
+request_id       [  77% ] 0/3 VUs    23.0s/30s  5.00 iters/s
+spoofed_header   [  77% ] 00/05 VUs  23.0s/30s  10.00 iters/s
+
+running (0m24.0s), 00/22 VUs, 960 complete and 0 interrupted iterations
+auth_expired     [  80% ] 0/3 VUs    24.0s/30s  5.00 iters/s
+auth_no_token    [  80% ] 0/3 VUs    24.0s/30s  5.00 iters/s
+auth_success     [  80% ] 00/05 VUs  24.0s/30s  10.00 iters/s
+queue_token      [  80% ] 0/3 VUs    24.0s/30s  5.00 iters/s
+request_id       [  80% ] 0/3 VUs    24.0s/30s  5.00 iters/s
+spoofed_header   [  80% ] 00/05 VUs  24.0s/30s  10.00 iters/s
+
+running (0m25.0s), 00/22 VUs, 1000 complete and 0 interrupted iterations
+auth_expired     [  83% ] 0/3 VUs    25.0s/30s  5.00 iters/s
+auth_no_token    [  83% ] 0/3 VUs    25.0s/30s  5.00 iters/s
+auth_success     [  83% ] 00/05 VUs  25.0s/30s  10.00 iters/s
+queue_token      [  83% ] 0/3 VUs    25.0s/30s  5.00 iters/s
+request_id       [  83% ] 0/3 VUs    25.0s/30s  5.00 iters/s
+spoofed_header   [  83% ] 00/05 VUs  25.0s/30s  10.00 iters/s
+
+running (0m26.0s), 00/22 VUs, 1040 complete and 0 interrupted iterations
+auth_expired     [  87% ] 0/3 VUs    26.0s/30s  5.00 iters/s
+auth_no_token    [  87% ] 0/3 VUs    26.0s/30s  5.00 iters/s
+auth_success     [  87% ] 00/05 VUs  26.0s/30s  10.00 iters/s
+queue_token      [  87% ] 0/3 VUs    26.0s/30s  5.00 iters/s
+request_id       [  87% ] 0/3 VUs    26.0s/30s  5.00 iters/s
+spoofed_header   [  87% ] 00/05 VUs  26.0s/30s  10.00 iters/s
+
+running (0m27.0s), 00/22 VUs, 1080 complete and 0 interrupted iterations
+auth_expired     [  90% ] 0/3 VUs    27.0s/30s  5.00 iters/s
+auth_no_token    [  90% ] 0/3 VUs    27.0s/30s  5.00 iters/s
+auth_success     [  90% ] 00/05 VUs  27.0s/30s  10.00 iters/s
+queue_token      [  90% ] 0/3 VUs    27.0s/30s  5.00 iters/s
+request_id       [  90% ] 0/3 VUs    27.0s/30s  5.00 iters/s
+spoofed_header   [  90% ] 00/05 VUs  27.0s/30s  10.00 iters/s
+
+running (0m28.0s), 00/22 VUs, 1120 complete and 0 interrupted iterations
+auth_expired     [  93% ] 0/3 VUs    28.0s/30s  5.00 iters/s
+auth_no_token    [  93% ] 0/3 VUs    28.0s/30s  5.00 iters/s
+auth_success     [  93% ] 00/05 VUs  28.0s/30s  10.00 iters/s
+queue_token      [  93% ] 0/3 VUs    28.0s/30s  5.00 iters/s
+request_id       [  93% ] 0/3 VUs    28.0s/30s  5.00 iters/s
+spoofed_header   [  93% ] 00/05 VUs  28.0s/30s  10.00 iters/s
+
+running (0m29.0s), 00/22 VUs, 1160 complete and 0 interrupted iterations
+auth_expired     [  97% ] 0/3 VUs    29.0s/30s  5.00 iters/s
+auth_no_token    [  97% ] 0/3 VUs    29.0s/30s  5.00 iters/s
+auth_success     [  97% ] 00/05 VUs  29.0s/30s  10.00 iters/s
+queue_token      [  97% ] 0/3 VUs    29.0s/30s  5.00 iters/s
+request_id       [  97% ] 0/3 VUs    29.0s/30s  5.00 iters/s
+spoofed_header   [  97% ] 00/05 VUs  29.0s/30s  10.00 iters/s
+
+running (0m30.0s), 00/22 VUs, 1200 complete and 0 interrupted iterations
+auth_expired     [ 100% ] 0/3 VUs    30.0s/30s  5.00 iters/s
+auth_no_token    [ 100% ] 0/3 VUs    30.0s/30s  5.00 iters/s
+auth_success     [ 100% ] 00/05 VUs  30.0s/30s  10.00 iters/s
+queue_token      [ 100% ] 0/3 VUs    30.0s/30s  5.00 iters/s
+request_id       [ 100% ] 0/3 VUs    30.0s/30s  5.00 iters/s
+spoofed_header   [ 100% ] 00/05 VUs  30.0s/30s  10.00 iters/s
+
+[scenario12-gateway-security-verification] PASS  (100% 일관성 기준)
+  [1] auth_success baseline P95 = 27.4ms / P50 = 0.0ms
+  [2] auth_expired → 401: 100.0%  ✓
+  [3] auth_missing → 401: 100.0%  ✓
+  [4] spoofed bypass: 0건 (must be 0)  ✓
+  [5] queue_token → 403: 100.0%  ✓
+  [6] X-Request-Id match: 100.0%  ✓
+  ProblemDetail 일관성: 100.0%  ✓
+  산출물: results/2026-04-08/{html,json,csv}/scenario12-gateway-security-verification_20260408-130752.*
+
+running (0m30.0s), 00/22 VUs, 1204 complete and 0 interrupted iterations
+auth_expired   ✓ [ 100% ] 0/3 VUs    30s  5.00 iters/s
+auth_no_token  ✓ [ 100% ] 0/3 VUs    30s  5.00 iters/s
+auth_success   ✓ [ 100% ] 00/05 VUs  30s  10.00 iters/s
+queue_token    ✓ [ 100% ] 0/3 VUs    30s  5.00 iters/s
+request_id     ✓ [ 100% ] 0/3 VUs    30s  5.00 iters/s
+spoofed_header ✓ [ 100% ] 00/05 VUs  30s  10.00 iters/s

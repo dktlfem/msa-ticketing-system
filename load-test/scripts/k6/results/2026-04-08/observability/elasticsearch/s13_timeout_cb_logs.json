@@ -1,0 +1,259 @@
+{
+    "took": 8,
+    "timed_out": false,
+    "_shards": {
+        "total": 2,
+        "successful": 2,
+        "skipped": 1,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 2707,
+            "relation": "eq"
+        },
+        "max_score": null,
+        "hits": [
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "JF9Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:03.020Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:03.020170882Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"spanId\":\"fe0d364dbcd134fa\",\"trace_id\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"trace_flags\":\"01\",\"span_id\":\"fe0d364dbcd134fa\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":6,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622303020
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "JV9Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:03.020Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:03.020218519Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"spanId\":\"fe0d364dbcd134fa\",\"trace_id\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"trace_flags\":\"01\",\"span_id\":\"fe0d364dbcd134fa\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622303020
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "I19Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:03.019Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:03.019705083Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=8e927cd5-715a-41ea-ba0c-a7db213b44f1 path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"spanId\":\"fe0d364dbcd134fa\",\"trace_id\":\"f16c61eee4cf03e394cf6121c04aa63d\",\"trace_flags\":\"01\",\"span_id\":\"fe0d364dbcd134fa\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622303019
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "AF9Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.818Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.817971752Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=8c0e59b4-5851-4282-b143-d68175bb49d7 path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"spanId\":\"921e4ee627001f0f\",\"trace_id\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"trace_flags\":\"01\",\"span_id\":\"921e4ee627001f0f\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302818
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "AV9Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.818Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.81838017Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"spanId\":\"921e4ee627001f0f\",\"trace_id\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"trace_flags\":\"01\",\"span_id\":\"921e4ee627001f0f\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":4,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302818
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "Al9Wa50BN2XdEt1NSxCr",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.818Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.818430338Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"spanId\":\"921e4ee627001f0f\",\"trace_id\":\"f7cffbc21fa8a57c0690eb6cd7392f79\",\"trace_flags\":\"01\",\"span_id\":\"921e4ee627001f0f\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302818
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "yF9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.619Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.618867913Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"spanId\":\"cd22c2d0349ef1df\",\"trace_id\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"trace_flags\":\"01\",\"span_id\":\"cd22c2d0349ef1df\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":4,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302619
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "yV9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.619Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.618925656Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"spanId\":\"cd22c2d0349ef1df\",\"trace_id\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"trace_flags\":\"01\",\"span_id\":\"cd22c2d0349ef1df\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302619
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "x19Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.618Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.61843585Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=c24ad41d-d8be-4f7c-8c32-a3044eb09a82 path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"spanId\":\"cd22c2d0349ef1df\",\"trace_id\":\"f92ca3e2522edeb25e68b838e9f600d1\",\"trace_flags\":\"01\",\"span_id\":\"cd22c2d0349ef1df\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302618
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "m19Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.419Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.419171428Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"spanId\":\"c6671367d6ea85a1\",\"trace_id\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"trace_flags\":\"01\",\"span_id\":\"c6671367d6ea85a1\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":4,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302419
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "nF9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.419Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.419220679Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"spanId\":\"c6671367d6ea85a1\",\"trace_id\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"trace_flags\":\"01\",\"span_id\":\"c6671367d6ea85a1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302419
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "ml9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.418Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.418733055Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=b9867164-bd32-4c39-b21b-a380a60b303f path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"spanId\":\"c6671367d6ea85a1\",\"trace_id\":\"bf0f4289a4f46ec8ad3e21e06d777296\",\"trace_flags\":\"01\",\"span_id\":\"c6671367d6ea85a1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302418
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "c19Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.221Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.221045555Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=20228970-e858-4706-9d03-66763dab7dec path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"df795330fea6e550988da7d9c5acd577\",\"spanId\":\"6325c7018177fc73\",\"trace_id\":\"df795330fea6e550988da7d9c5acd577\",\"trace_flags\":\"01\",\"span_id\":\"6325c7018177fc73\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302221
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "dF9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.221Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.221529751Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"df795330fea6e550988da7d9c5acd577\",\"spanId\":\"6325c7018177fc73\",\"trace_id\":\"df795330fea6e550988da7d9c5acd577\",\"trace_flags\":\"01\",\"span_id\":\"6325c7018177fc73\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":5,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302221
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "dV9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.221Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.221582885Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"df795330fea6e550988da7d9c5acd577\",\"spanId\":\"6325c7018177fc73\",\"trace_id\":\"df795330fea6e550988da7d9c5acd577\",\"trace_flags\":\"01\",\"span_id\":\"6325c7018177fc73\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302221
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "TV9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.024Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.024312287Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"spanId\":\"d3ef05e6234a5555\",\"trace_id\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"trace_flags\":\"01\",\"span_id\":\"d3ef05e6234a5555\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":5,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302024
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "Tl9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.024Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.024362282Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"spanId\":\"d3ef05e6234a5555\",\"trace_id\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"trace_flags\":\"01\",\"span_id\":\"d3ef05e6234a5555\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302024
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "TF9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:02.023Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:02.023874086Z\",\"@version\":\"1\",\"message\":\"[CB_FALLBACK] requestId=dc99c011-339b-4238-aff2-b07acc8c34e0 path=/fallback/service-unavailable\",\"logger_name\":\"com.koesc.ci_cd_test_app.controller.FallbackController\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"WARN\",\"level_value\":30000,\"appName\":\"scg\",\"traceId\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"spanId\":\"d3ef05e6234a5555\",\"trace_id\":\"d4f6dc28d3f095939f338b14fd97f8c7\",\"trace_flags\":\"01\",\"span_id\":\"d3ef05e6234a5555\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622302023
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "Jl9Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:01.822Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:01.822346715Z\",\"@version\":\"1\",\"message\":\"ACCESS\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.AccessLogFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"7dcb7bc6d907046cf20cdaacb5897f11\",\"spanId\":\"485cd56fe839869b\",\"trace_id\":\"7dcb7bc6d907046cf20cdaacb5897f11\",\"trace_flags\":\"01\",\"span_id\":\"485cd56fe839869b\",\"requestId\":null,\"method\":\"GET\",\"path\":\"/api/v1/waiting-room/status\",\"statusCode\":503,\"durationMs\":4,\"clientIp\":\"172.19.0.1\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622301822
+                ]
+            },
+            {
+                "_index": ".ds-filebeat-9.3.0-2026.03.28-000002",
+                "_id": "J19Wa50BN2XdEt1NSw-r",
+                "_score": null,
+                "_source": {
+                    "@timestamp": "2026-04-08T04:25:01.822Z",
+                    "message": "{\"@timestamp\":\"2026-04-08T04:25:01.822396523Z\",\"@version\":\"1\",\"message\":\"[ACCESS_DONE] GET /api/v1/waiting-room/status status=503\",\"logger_name\":\"com.koesc.ci_cd_test_app.filter.RequestLogMaskingFilter\",\"thread_name\":\"lettuce-epollEventLoop-5-1\",\"level\":\"INFO\",\"level_value\":20000,\"appName\":\"scg\",\"traceId\":\"7dcb7bc6d907046cf20cdaacb5897f11\",\"spanId\":\"485cd56fe839869b\",\"trace_id\":\"7dcb7bc6d907046cf20cdaacb5897f11\",\"trace_flags\":\"01\",\"span_id\":\"485cd56fe839869b\",\"app\":\"scg\"}\n"
+                },
+                "sort": [
+                    1775622301822
+                ]
+            }
+        ]
+    }
+}

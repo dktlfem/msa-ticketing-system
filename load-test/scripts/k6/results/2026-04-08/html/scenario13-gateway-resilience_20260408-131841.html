@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCG Resilience 검증 — 시나리오 13</title>
+<style>
+  body { font-family: -apple-system, 'Pretendard', sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+  h2 { font-size: 1.1rem; margin-top: 28px; color: #374151; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: 700; font-size: 0.85rem; background: #ef4444; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #16a34a; font-weight: 600; } .fail { color: #dc2626; font-weight: 600; }
+  .warn { color: #d97706; font-weight: 600; }
+  .meta { color: #6b7280; font-size: 0.8rem; margin-top: 32px; }
+  .diag { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 10px 0; }
+  .diag h3 { color: #dc2626; font-size: 0.95rem; margin: 0 0 8px 0; }
+  .diag ol, .diag ul { margin: 6px 0 0; padding-left: 20px; }
+  .diag li { margin-bottom: 8px; }
+  .diag .cause { font-weight: 600; }
+  .diag .how { color: #6b7280; font-size: 0.85rem; display: block; }
+  .note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; line-height: 1.6; color: #15803d; }
+  .nodata { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 8px 0; font-size: 0.9rem; color: #92400e; }
+  .obs { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px 18px; margin: 10px 0; font-size: 0.88rem; line-height: 1.7; }
+  .obs strong { color: #0c4a6e; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 0.82rem; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 14px; border-radius: 8px; font-size: 0.82rem; overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+  .card-val { font-size: 1.6rem; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>SCG Gateway Resilience 검증 — 시나리오 13 <span class="badge">FAIL</span></h1>
+<p style="color:#6b7280;font-size:0.85rem;">2026-04-08T04:18:41.529Z | http://192.168.124.100:8090 | mode: both</p>
+
+<h2>검증 항목</h2>
+<div class="grid">
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">Timeout(504) 응답</div>
+    <div class="card-val" style="color:#6b7280">N/A</div>
+    <div style="font-size:0.8rem;">지연 미유발 상태</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">CB Fallback(503) 응답</div>
+    <div class="card-val" style="color:#16a34a">900건</div>
+    <div style="font-size:0.8rem;">Fallback 감지 900건</div>
+  </div>
+  <div class="card">
+    <div style="color:#6b7280;font-size:0.8rem;">Concert-app 격리</div>
+    <div class="card-val" style="color:#16a34a">100.0%</div>
+    <div style="font-size:0.8rem;">P95: 23.2ms</div>
+  </div>
+</div>
+
+<h2>실행 전 준비 (수동 작업 필요)</h2>
+<pre>
+# [A] timeout 유발 — waitingroom 응답 12초 지연
+ssh 192.168.124.100 "docker compose exec waitingroom-app tc qdisc add dev eth0 root netem delay 12000ms"
+
+# [B] Circuit Breaker 유발 — waitingroom 서비스 중단
+ssh 192.168.124.100 "docker compose stop waitingroom-app"
+
+# 복구 (테스트 완료 후)
+ssh 192.168.124.100 "docker compose exec waitingroom-app tc qdisc del dev eth0 root"
+ssh 192.168.124.100 "docker compose start waitingroom-app"
+</pre>
+
+<h2>상세 결과</h2>
+<table>
+  <tr><th>검증 항목</th><th>발생 건수</th><th>ProblemDetail 준수율</th><th>판정</th></tr>
+  <tr>
+    <td>[1] Timeout → 504 응답 형식</td>
+    <td class="num">0건</td>
+    <td class="num">—</td>
+    <td><span class="warn">NO_DATA (지연 미유발)</span></td>
+  </tr>
+  <tr>
+    <td>[2] CB Fallback → 503 응답 형식</td>
+    <td class="num">900건 (CB open: 900건)</td>
+    <td class="num">100.0%</td>
+    <td><span class="pass">PASS</span></td>
+  </tr>
+  <tr>
+    <td>[3] 정상 서비스 격리 (concert-app)</td>
+    <td class="num">1801건</td>
+    <td class="num">N/A</td>
+    <td><span class="pass">PASS</span></td>
+  </tr>
+</table>
+
+<h2>정상 서비스 레이턴시</h2>
+<table>
+  <tr><th>서비스</th><th class="num">P50</th><th class="num">P95</th><th>목표</th><th>판정</th></tr>
+  <tr>
+    <td>concert-app (격리 확인)</td>
+    <td class="num">0.0ms</td>
+    <td class="num">23.2ms</td>
+    <td>&lt;300ms</td>
+    <td><span class="pass">PASS</span></td>
+  </tr>
+</table>
+
+<h2>Threshold 판정</h2>
+<table>
+  <tr><th>Threshold</th><th>결과</th></tr>
+  <tr><td>gr_normal_success_rate: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>gr_fallback_correct_fmt: rate>=1.0</td><td><span class="pass">PASS</span></td></tr><tr><td>gr_timeout_correct_fmt: rate>=1.0</td><td><span class="pass">PASS</span></td></tr>
+</table>
+
+<h2>분석</h2>
+
+
+<h2>Observability 수집 가이드</h2>
+<div class="obs">
+  <strong>Jaeger:</strong> <code>http://192.168.124.100:8080/jaeger/search?service=scg-app</code><br/>
+  → waitingroom-app 호출 스팬에서 <code>error=true</code> 태그 및 timeout 메시지 확인<br/><br/>
+  <strong>Kibana:</strong> <code>log.level:ERROR AND (message:*timeout* OR message:*CircuitBreaker* OR message:*fallback*)</code><br/>
+  → 테스트 시간대 필터링 → 504/CB open 로그 확인<br/><br/>
+  <strong>Elasticsearch:</strong> <code>GET /filebeat-*/_search?q=log.level:ERROR AND message:GatewayTimeout</code><br/><br/>
+  <strong>Grafana SCG 대시보드:</strong><br/>
+  → HTTP Status Distribution: 504/503 spike 확인<br/>
+  → Circuit Breaker State: waitingroom-service-cb 상태 전환 (Closed → Open → Half-Open) 확인<br/><br/>
+  <strong>AlertManager:</strong> <code>http://192.168.124.100:8080/alertmanager/#/alerts</code><br/>
+  → WaitingroomServiceDown 알림 발생 여부 확인 (alert-rules.yml 설정에 따라)<br/><br/>
+  <strong>Prometheus PromQL:</strong><br/>
+  <code>rate(http_server_requests_seconds_count{status="504"}[1m])</code> — timeout 발생률<br/>
+  <code>resilience4j_circuitbreaker_state{name="waitingroom-service-cb"}</code> — CB 상태 (0=closed, 1=open, 2=half-open)
+</div>
+
+<p class="meta">Generated by k6 scenario13-gateway-resilience.js | run_id: 20260408-131841 | mode: both</p>
+</body>
+</html>

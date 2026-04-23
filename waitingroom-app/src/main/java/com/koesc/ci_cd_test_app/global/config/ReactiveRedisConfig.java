@@ -1,5 +1,7 @@
 package com.koesc.ci_cd_test_app.global.config;
 
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.protocol.ProtocolVersion;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,10 +9,14 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.time.Duration;
 
 @Profile("!test") // 테스트에서 test 프로필이 활성화될 때 해당 빈들을 로딩하지 않기 위한 목적
 @Configuration
@@ -28,9 +34,18 @@ public class ReactiveRedisConfig {
     @Bean
     @Primary
     public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
-        config.setPassword(password);
-        return new LettuceConnectionFactory(config);
+        RedisStandaloneConfiguration serverConfig = new RedisStandaloneConfiguration(host, port);
+        serverConfig.setPassword(password);
+
+        // RESP3 -> RESP2 강제 지정 (Lettuce 6.x + Redis 7+ 인증 문제 해결)
+        LettuceClientConfiguration clientConfig = LettucePoolingClientConfiguration.builder()
+                .clientOptions(ClientOptions.builder()
+                        .protocolVersion(ProtocolVersion.RESP2)
+                        .build())
+                .shutdownTimeout(Duration.ofMillis(200))
+                .build();
+
+        return new LettuceConnectionFactory(serverConfig, clientConfig);
     }
 
     @Bean
