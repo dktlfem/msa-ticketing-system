@@ -10,18 +10,23 @@ pipeline {
     }
 
     environment {
-        // 권장: user-app도 포함해서 전부 같은 레포 규칙으로 통일
         DOCKER_IMAGE = 'dktlfem/ci-cd-test'
 
-        // GitOps repo
+        // Argo CD가 실제로 바라보는 브랜치와 맞춰야 함
         GITOPS_REPO_URL = 'https://github.com/dktlfem/homelab-gitops.git'
+<<<<<<< HEAD
         GITOPS_BRANCH   = 'chore/jenkinsfile-update-test'
+=======
+        GITOPS_BRANCH   = 'main'
+>>>>>>> 2faf031 (chore: Jenkinsfile live Cluster A (10.10.10.30)의 user-app-config, user-app-secret key 존재 여부를 확인한 뒤, 통과하면 이미지 빌드/푸쉬, GitOps manifest 갱신, rollout 검증하기 위한 내용 수정)
 
-        // Jenkins Credentials
-        // - dockerhub-creds: Docker Hub username/password
-        // - github-pat: GitHub username + PAT or token
         DOCKER_CREDENTIALS_ID = 'dktlfem'
         GIT_CREDENTIALS_ID    = 'github-pat'
+
+        K8S_NAMESPACE = 'default'
+        K8S_APP_KUBECONFIG_CREDENTIALS_ID = 'k3s-app-kubeconfig'
+
+        KUBECTL_VERSION = 'v1.34.1'
     }
 
     options {
@@ -42,11 +47,122 @@ pipeline {
 
         stage('Install Tools') {
             steps {
-                sh '''
-                    apt-get update
-                    apt-get install -y docker.io dos2unix git python3
-                    ln -sf /usr/bin/docker /usr/local/bin/docker || true
-                '''
+                sh(
+                    script: '''
+                        apt-get update
+                        apt-get install -y docker.io dos2unix git python3 curl ca-certificates
+                        ln -sf /usr/bin/docker /usr/local/bin/docker || true
+
+                        curl -fsSL -o /usr/local/bin/kubectl \
+                          https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
+                        chmod +x /usr/local/bin/kubectl
+
+                        kubectl version --client
+                    '''.stripIndent()
+                )
+            }
+        }
+
+        stage('Preflight Config Contract') {
+            steps {
+                script {
+                    def requiredConfigMapKeys = [
+                        'user-app': [
+                            'SPRING_DATASOURCE_URL',
+                            'SPRING_PROFILES_ACTIVE',
+                            'SPRING_DATA_REDIS_URL'
+                        ]
+                    ]
+
+                    def requiredSecretKeys = [
+                        'user-app': [
+                            'SPRING_DATASOURCE_USERNAME',
+                            'SPRING_DATASOURCE_PASSWORD',
+                            'REDIS_PASSWORD'
+                        ]
+                    ]
+
+                    def configMapNameMap = [
+                        'user-app': 'user-app-config'
+                    ]
+
+                    def secretNameMap = [
+                        'user-app': 'user-app-secret'
+                    ]
+
+                    def deploymentNameMap = [
+                        'user-app': 'user-app'
+                    ]
+
+                    def cmKeys = requiredConfigMapKeys[params.TARGET_MODULE] ?: []
+                    def secretKeys = requiredSecretKeys[params.TARGET_MODULE] ?: []
+                    def configMapName = configMapNameMap[params.TARGET_MODULE]
+                    def secretName = secretNameMap[params.TARGET_MODULE]
+                    def deploymentName = deploymentNameMap[params.TARGET_MODULE] ?: params.TARGET_MODULE
+
+                    if (!configMapName || !secretName) {
+                        error("No config contract defined for ${params.TARGET_MODULE}")
+                    }
+
+                    env.CONFIGMAP_NAME = configMapName
+                    env.SECRET_NAME = secretName
+                    env.DEPLOYMENT_NAME = deploymentName
+                    env.REQUIRED_CONFIGMAP_KEYS = cmKeys.join('\n')
+                    env.REQUIRED_SECRET_KEYS = secretKeys.join('\n')
+                }
+
+                withCredentials([file(
+                    credentialsId: "${env.K8S_APP_KUBECONFIG_CREDENTIALS_ID}",
+                    variable: 'KUBECONFIG_FILE'
+                )]) {
+                    sh(
+                        script: '''
+python3 - <<'PY'
+import json
+import os
+import subprocess
+import sys
+
+namespace = os.environ['K8S_NAMESPACE']
+kubeconfig = os.environ['KUBECONFIG_FILE']
+configmap_name = os.environ['CONFIGMAP_NAME']
+secret_name = os.environ['SECRET_NAME']
+
+required_cm = [x for x in os.environ.get('REQUIRED_CONFIGMAP_KEYS', '').splitlines() if x.strip()]
+required_secret = [x for x in os.environ.get('REQUIRED_SECRET_KEYS', '').splitlines() if x.strip()]
+
+def get_keys(kind, name):
+    cmd = [
+        'kubectl', '--kubeconfig', kubeconfig,
+        '-n', namespace, 'get', kind, name, '-o', 'json'
+    ]
+    raw = subprocess.check_output(cmd, text=True)
+    doc = json.loads(raw)
+    return set((doc.get('data') or {}).keys())
+
+cm_keys = get_keys('configmap', configmap_name)
+secret_keys = get_keys('secret', secret_name)
+
+missing_cm = sorted(set(required_cm) - cm_keys)
+missing_secret = sorted(set(required_secret) - secret_keys)
+
+print(f'ConfigMap checked: {configmap_name}')
+print(f'Secret checked: {secret_name}')
+print(f'ConfigMap keys present: {sorted(cm_keys)}')
+print(f'Secret keys present: {sorted(secret_keys)}')
+
+if missing_cm or missing_secret:
+    if missing_cm:
+        print(f'Missing ConfigMap keys: {missing_cm}', file=sys.stderr)
+    if missing_secret:
+        print(f'Missing Secret keys: {missing_secret}', file=sys.stderr)
+    sys.exit(1)
+
+print('Preflight config contract passed.')
+PY
+                        '''.stripIndent()
+                    )
+                }
             }
         }
 
@@ -124,11 +240,7 @@ pipeline {
                 dir('gitops') {
                     script {
                         def manifestPathMap = [
-                            'user-app'       : 'cluster-a/apps/user-app/deployment.yaml',
-                            'waitingroom-app': 'cluster-a/apps/waitingroom-app/deployment.yaml',
-                            'concert-app'    : 'cluster-a/apps/concert-app/deployment.yaml',
-                            'booking-app'    : 'cluster-a/apps/booking-app/deployment.yaml',
-                            'payment-app'    : 'cluster-a/apps/payment-app/deployment.yaml'
+                            'user-app': 'cluster-a/apps/user-app/deployment.yaml'
                         ]
 
                         def manifestPath = manifestPathMap[params.TARGET_MODULE]
@@ -139,10 +251,9 @@ pipeline {
                         env.MANIFEST_PATH = manifestPath
                     }
 
-                    sh '''
-                        test -f "${MANIFEST_PATH}"
-
-                        python3 - <<'PY'
+                    sh(
+                        script: '''
+python3 - <<'PY'
 from pathlib import Path
 import os
 import re
@@ -165,8 +276,9 @@ path.write_text(new_text, encoding='utf-8')
 print(f"Updated {path} -> {image}")
 PY
 
-                        git diff -- ${MANIFEST_PATH}
-                    '''
+                        git diff -- "${MANIFEST_PATH}"
+                        '''.stripIndent()
+                    )
                 }
             }
         }
@@ -184,6 +296,43 @@ PY
 
                         git commit -m "Update ${TARGET_MODULE} image to ${IMAGE_TAG}"
                         git push origin ${GITOPS_BRANCH}
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                withCredentials([file(
+                    credentialsId: "${env.K8S_APP_KUBECONFIG_CREDENTIALS_ID}",
+                    variable: 'KUBECONFIG_FILE'
+                )]) {
+                    sh '''
+                        TARGET_IMAGE="${DOCKER_IMAGE}:${IMAGE_TAG}"
+
+                        echo "Waiting for Argo CD to apply image: ${TARGET_IMAGE}"
+
+                        for i in $(seq 1 60); do
+                          CURRENT_IMAGE=$(kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$K8S_NAMESPACE" \
+                            get deploy "$DEPLOYMENT_NAME" -o jsonpath='{.spec.template.spec.containers[0].image}' || true)
+
+                          echo "Current image: ${CURRENT_IMAGE}"
+
+                          if [ "$CURRENT_IMAGE" = "$TARGET_IMAGE" ]; then
+                            echo "Target image detected in deployment."
+                            break
+                          fi
+
+                          if [ "$i" -eq 60 ]; then
+                            echo "Timed out waiting for deployment image update."
+                            exit 1
+                          fi
+
+                          sleep 5
+                        done
+
+                        kubectl --kubeconfig "$KUBECONFIG_FILE" -n "$K8S_NAMESPACE" \
+                          rollout status deploy/"$DEPLOYMENT_NAME" --timeout=300s
                     '''
                 }
             }
