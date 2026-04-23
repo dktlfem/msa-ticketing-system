@@ -15,7 +15,7 @@ pipeline {
 
         // GitOps repo
         GITOPS_REPO_URL = 'https://github.com/dktlfem/homelab-gitops.git'
-        GITOPS_BRANCH   = 'chore/jenkinsfile-update'
+        GITOPS_BRANCH   = 'chore/jenkinsfile-update-test'
 
         // Jenkins Credentials
         // - dockerhub-creds: Docker Hub username/password
