@@ -14,11 +14,8 @@ pipeline {
 
         // Argo CD가 실제로 바라보는 브랜치와 맞춰야 함
         GITOPS_REPO_URL = 'https://github.com/dktlfem/homelab-gitops.git'
-<<<<<<< HEAD
         GITOPS_BRANCH   = 'chore/jenkinsfile-update-test'
-=======
         GITOPS_BRANCH   = 'main'
->>>>>>> 2faf031 (chore: Jenkinsfile live Cluster A (10.10.10.30)의 user-app-config, user-app-secret key 존재 여부를 확인한 뒤, 통과하면 이미지 빌드/푸쉬, GitOps manifest 갱신, rollout 검증하기 위한 내용 수정)
 
         DOCKER_CREDENTIALS_ID = 'dktlfem'
         GIT_CREDENTIALS_ID    = 'github-pat'
