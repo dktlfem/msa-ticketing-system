@@ -14,8 +14,9 @@ pipeline {
 
         // Argo CD가 실제로 바라보는 브랜치와 맞춰야 함
         GITOPS_REPO_URL = 'https://github.com/dktlfem/homelab-gitops.git'
-        GITOPS_BRANCH   = 'main'
+        GITOPS_BRANCH   = 'chore/jenkinsfile-update-test'
 
+        // Jenkins Credentials
         DOCKER_CREDENTIALS_ID = 'dktlfem'
         GIT_CREDENTIALS_ID    = 'github-pat'
 
